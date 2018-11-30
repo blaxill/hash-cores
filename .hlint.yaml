@@ -1,0 +1,16 @@
+- extensions:
+  - default: 
+    - DataKinds
+    - FlexibleContexts
+    - FlexibleInstances
+    - GADTs
+    - InstanceSigs
+    - MultiParamTypeClasses
+    - RankNTypes
+    - ScopedTypeVariables
+    - TupleSections
+    - TypeApplications
+    - TypeFamilies
+    - TypeOperators
+    - ExplicitNamespaces
+

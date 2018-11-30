@@ -1,0 +1,93 @@
+name:                dsignal-hash-cores
+version:             0.1.0.0
+license:             BSD3
+author:              Ben Blaxill
+maintainer:          Ben Blaxill <ben.blaxill@gmail.com>
+copyright:           2018
+category:            Hardware
+build-type:          Simple
+cabal-version:       >=1.10
+
+library
+  hs-source-dirs:      src
+  exposed-modules:     Clash.HashCores.Core
+                     , Clash.HashCores.Class.MerkleDamgard
+                     , Clash.HashCores.Class.Composition
+                     , Clash.HashCores.Composition.Iterated
+                     , Clash.HashCores.Composition.Pipelined
+                     , Clash.HashCores.Compositions
+                     , Clash.HashCores.Hash.SHA256
+                     , Clash.HashCores.Hashes
+                     , Clash.HashCores.TH
+  default-extensions: DataKinds
+                      FlexibleContexts
+                      FlexibleInstances
+                      GADTs
+                      InstanceSigs
+                      MultiParamTypeClasses
+                      RankNTypes
+                      ScopedTypeVariables
+                      TupleSections
+                      TypeApplications
+                      TypeFamilies
+                      TypeOperators
+
+  build-depends:       base >= 4.7 && < 5
+                     , ghc-typelits-extra
+                     , ghc-typelits-natnormalise
+                     , ghc-typelits-knownnat
+                     , clash-prelude
+                     , lens
+                     , deepseq
+                     , QuickCheck
+                     , template-haskell
+                     , deepseq
+                     , data-default
+                     , bifunctors
+                     , type-level-sets >= 0.8.9.0
+                     , generic-arbitrary
+                     , singletons                >= 1.0     && < 3.0
+                     , reflection
+  default-language:    Haskell2010
+  ghc-options: -Wall -Werror -Wwarn=incomplete-patterns
+                             -- ^ GADTs confuse incomplete-patterns
+
+executable dsignal-hash-cores-test
+  hs-source-dirs:      test
+  main-is:             Spec.hs
+  default-extensions: DataKinds
+                      FlexibleContexts
+                      FlexibleInstances
+                      GADTs
+                      InstanceSigs
+                      MultiParamTypeClasses
+                      RankNTypes
+                      ScopedTypeVariables
+                      TupleSections
+                      TypeApplications
+                      TypeFamilies
+                      TypeOperators
+
+  build-depends:       base
+                     , ghc-typelits-extra
+                     , ghc-typelits-natnormalise
+                     , ghc-typelits-knownnat
+                     , dsignal-hash-cores
+                     , clash-prelude
+                     , hspec
+                     , QuickCheck
+                     , smallcheck
+                     , lens
+                     , tasty
+                     , tasty-smallcheck
+                     , tasty-quickcheck
+                     , tasty-hunit
+                     , deepseq
+                     , cryptohash
+                     , bytestring
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+                       -fplugin=GHC.TypeLits.Normalise
+                       -fplugin=GHC.TypeLits.KnownNat.Solver
+  default-language:    Haskell2010
+  other-modules:       Test.HashCores.SHA256
+                     , Test.HashCores.PipelinedSHA256

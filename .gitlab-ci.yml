@@ -1,0 +1,14 @@
+build:
+  image: nixos/nix
+  only:
+    changes:
+      - src
+      - test
+      - hash-cores.cabal
+  stage: build
+  script: ls -laR src; ls -laR test; nix-build
+
+test:
+  image: nixos/nix
+  stage: test
+  script: nix-shell --run "hash-cores-test"
