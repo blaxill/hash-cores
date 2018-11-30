@@ -1,0 +1,54 @@
+name:                hash-cores
+version:             0.1.0.0
+license:             BSD3
+author:              Ben Blaxill
+maintainer:          Ben Blaxill <ben.blaxill@gmail.com>
+copyright:           2018
+category:            Hardware
+build-type:          Simple
+cabal-version:       >=1.10
+
+library
+  hs-source-dirs:      src
+  exposed-modules:     Clash.HashCores.Sha256
+                     , Clash.HashCores.Utils
+                     , Clash.HashCores.Demo
+                     , Clash.HashCores.Cores
+  build-depends:       base >= 4.7 && < 5
+                     , ghc-typelits-extra
+                     , ghc-typelits-natnormalise
+                     , ghc-typelits-knownnat
+                     , clash-prelude
+                     , clash-ghc
+                     , lens
+                     , mtl
+                     , template-haskell
+                     , deepseq
+                     , bifunctors
+                     , composition-extra
+                     , generic-arbitrary
+                     , singletons                >= 1.0     && < 3.0
+  default-language:    Haskell2010
+
+test-suite hash-cores-test
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  main-is:             Spec.hs
+  build-depends:       base
+                     , ghc-typelits-extra
+                     , ghc-typelits-natnormalise
+                     , ghc-typelits-knownnat
+                     , hash-cores
+                     , clash-prelude
+                     , hspec
+                     , QuickCheck
+                     , lens
+                     , deepseq
+                     , cryptohash
+                     , bytestring
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+                       -fplugin=GHC.TypeLits.Extra.Solver
+                       -fplugin=GHC.TypeLits.Normalise
+                       -fplugin=GHC.TypeLits.KnownNat.Solver
+  default-language:    Haskell2010
+  other-modules:       HashCores.Sha256Spec
