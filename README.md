@@ -56,15 +56,14 @@ systemClockSHAPipelined = exposeClockReset (singleBlockCore (Pipelined :. SHA256
 
 1. Run the Clash compiler with something like the following:
 
-  cabal new-run clashi -- -i./dsignal-hash-cores/src/ -fclash-spec-limit=128 -fclash-inline-limit=128 -outputdir output
+  `cabal new-run clashi -- -i./dsignal-hash-cores/src/ -fclash-spec-limit=128 -fclash-inline-limit=128 -outputdir output`
 
 2. Then from inside clashi
 
-  :l examples/TopEntities.hs
-
-3. Then compile into verilog
-
+  ~~~
+  :l examples/TopEntities.hs`
   :verilog
+  ~~~
 
 ### Testing
 
