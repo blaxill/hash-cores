@@ -2,44 +2,55 @@
 
 An experimental Clash based hash core library testing type level parametric hash core design.
 
+First stops:
+
+- [HashCores/Class/MerkleDamgard.hs](https://github.com/blaxill/dsignal-hash-cores/blob/master/src/Clash/HashCores/Class/MerkleDamgard.hs)
+- [HashCores/Hash/SHA256.hs](https://github.com/blaxill/dsignal-hash-cores/blob/master/src/Clash/HashCores/Hash/SHA256.hs)
+- [HashCores/Composition/Pipelined.hs](https://github.com/blaxill/dsignal-hash-cores/blob/master/src/Clash/HashCores/Composition/Pipelined.hs)
+
 ### Usage
 
-Compose a chosen hash function with a chosen composition strategy. For example specifying a fully unrolled/pipelined SHA256, with a delay after each addition and round of its compression function is simple:
-
-~~~Haskell
-λ> core = Pipelined :.: SHA256 @1 @1
-λ> core
-Core (Pipelined) (SHA-256 d1 d1)
-λ> singleBlockCore core
-singleBlockCore core
-  :: (?clk::Clock domain gated, ?rst::Reset domain synchronous) =>
-     MaybeDSignal domain t0 (BitVector 512)
-     -> (DSignal domain (t0 + 192) (BitVector 256),
-         DSignal domain t0 Bool)
-~~~
-
-The last invocation `singleBlockCore core` instantiates a core that processes single blocks (i.e. cannot process variable length inputs). We can see that the delays induced by pipelining are represented in the result type (here the delay is `+192`cycles)
-
-### Examples
+Compose a chosen hash function with a chosen composition strategy. Check `examples/TopEntities.hs` for simple examples:
 
 ~~~
-
-systemClockSHAIterated :: SystemClockReset
-  => DSignal System 0 (Block (SHA256 0 1))
+systemClockSHAIterated
+  :: Clock System Source
+  -> Reset System Asynchronous
+  -> DSignal System 0 (Block (SHA256 0 1))
   -> DSignal System 0 Bool
   -> ( DSignal System 64 (Hash (SHA256 0 1))
      , DSignal System 0 Bool )
-systemClockSHAIterated = singleBlockCore (Iterated @1 :.: SHA256 @0 @1)
-{-# ANN systemClockSHAIterated (defSyn "systemClockShaIterated") #-}
+systemClockSHAIterated = exposeClockReset (singleBlockCore (Iterated @1 :. SHA256 @0 @1))
+{-# ANN systemClockSHAIterated
+  (Synthesize
+    { t_name   = "shaIterated"
+    , t_inputs = [ PortName "clk"
+                 , PortName "rst"
+                 , PortName "block"
+                 , PortName "ready"
+                 ]
+    , t_output = PortProduct "" [PortName "hash", PortName "valid"]
+    }) #-}
 {-# NOINLINE systemClockSHAIterated #-}
 
-systemClockSHAPipelined :: SystemClockReset
-  => DSignal System 0 (Block (SHA256 1 0))
+systemClockSHAPipelined
+  :: Clock System Source
+  -> Reset System Asynchronous
+  -> DSignal System 0 (Block (SHA256 0 1))
   -> DSignal System 0 Bool
-  -> ( DSignal System 64 (Hash (SHA256 1 0))
+  -> ( DSignal System 64 (Hash (SHA256 0 1))
      , DSignal System 0 Bool )
-systemClockSHAPipelined = singleBlockCore (Pipelined :.: SHA256 @0 @1)
-{-# ANN systemClockSHAPipelined (defSyn "systemClockShaPipelined") #-}
+systemClockSHAPipelined = exposeClockReset (singleBlockCore (Pipelined :. SHA256 @0 @1))
+{-# ANN systemClockSHAPipelined
+  (Synthesize
+    { t_name   = "shaPipelined"
+    , t_inputs = [ PortName "clk"
+                 , PortName "rst"
+                 , PortName "block"
+                 , PortName "ready"
+                 ]
+    , t_output = PortProduct "" [PortName "hash", PortName "valid"]
+    }) #-}
 {-# NOINLINE systemClockSHAPipelined #-}
 ~~~
 
