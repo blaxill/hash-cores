@@ -44,8 +44,6 @@ library
                      , deepseq
                      , data-default
                      , bifunctors
-                     , type-level-sets >= 0.8.9.0
-                     , generic-arbitrary
                      , singletons                >= 1.0     && < 3.0
                      , reflection
   default-language:    Haskell2010
