@@ -63,6 +63,9 @@ instance (KnownNat slots, 1 <= slots) => Composition (Iterated slots) where
 
       ready = (>=) rounds <$> counters
 
+-- | A function to track the values passing through an iterated pipelined component.
+-- For a pipeline of n cycles, we store n + 1 counters. The values moving through the
+-- pipeline aren't stored, only counters tracking them.
 rotatingCounters :: forall domain gated synchronous n a.
                  ( HiddenClockReset domain gated synchronous
                  , SaturatingNum a, Undefined a, KnownNat n)
