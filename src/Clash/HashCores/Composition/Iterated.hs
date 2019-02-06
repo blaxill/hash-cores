@@ -23,11 +23,12 @@ import           Clash.Prelude
 
 import           Clash.HashCores.Class.Composition
 
--- | A core that iterates in place with latency of @CompressionDelay hash@ *
--- @Rounds hash@.
+-- | A core that iterates in place without explicit storage of state (although
+-- implicitly stored in the iterated function), by connecting input to output
+-- and tracking iteration indices.
 data Iterated (slots::Nat) = Iterated deriving Show
 
-instance (KnownNat slots, 1 <= slots) => Composition (Iterated slots) where
+instance (KnownNat slots, 1 <= slots) => Composition (Iterated slots) 'Flow where
   indexedCompose ::
     forall domain gated synchronous t0 t1 x xn1 a .
     ( HiddenClockReset domain gated synchronous
@@ -39,27 +40,34 @@ instance (KnownNat slots, 1 <= slots) => Composition (Iterated slots) where
         -> DSignal domain t0' a
         -> DSignal domain (t0'+t1) a
        )
+    -- | Input value has DataFlow semantics- value/valid/ready
+    -- Value and valid are inputs, ready is output we signal.
+    -- If
     -> DSignal domain t0 a                -- In
     -> DSignal domain t0 Bool             -- Valid
-    -> ( DSignal domain (t0+(x*t1)) a  -- Out
+    -> ( DSignal domain (t0+(x*t1)) a     -- Out
        , DSignal domain t0 Bool)          -- Ready
   indexedCompose _iterated f input valid =
-  -- XXX: Our safety breaks down in here!
+  -- XXX: Our type safety breaks down in here!
       ( unsafeFromSignal state
       , unsafeFromSignal ready )
     where
+      -- | Basic idea is to use an Index larger than iteration count, so we can
+      -- saturate at some value above our iteration count to represent "done"
+
+      accept = toSignal valid .==. ready
+
       rounds = snatToNum (SNat @x)
 
       counters :: Signal domain (Index (3 + x))
-      counters = rotatingCountersLE (SNat @slots) (rounds+1) SatBound (toSignal valid)
-
-      loadSig = mux (toSignal valid) (toSignal input) state
+      counters = rotatingCountersLE (SNat @slots) (rounds+1) SatBound accept
 
       state :: Signal domain a
       state = toSignal
-        (f
+        ( f
           (unsafeFromSignal $ resize . min (rounds-1) <$> counters)
-          (unsafeFromSignal loadSig))
+          (unsafeFromSignal $ mux accept (toSignal input) state)
+        )
 
       ready = (>=) rounds <$> counters
 
@@ -73,19 +81,19 @@ rotatingCounters :: forall domain gated synchronous n a.
                  -> a
                  -> SaturationMode
                  -> Signal domain Bool -- ^ Reset current head at time t
-                 -> Signal domain a -- ^ Value of counter reset at time t,t+s,t+2s...
+                 -> Signal domain a -- ^ Value of counter reset at time t,t+n,t+2n...
 rotatingCounters _slots initial saturationMode reset = mux reset 0 (fmap head counters)
   where
     resetHead True (_:>xs) = 0 :> xs
     resetHead False xs     =      xs
 
-    placedCounters = resetHead <$> reset <*> counters
-
     inc (x:>xs) = xs :< (satAdd saturationMode x 1)
 
     counters :: Signal domain (Vec (n + 1) a)
-    counters = register (repeat initial) (fmap inc placedCounters)
+    counters = register (repeat initial)
+      (inc <$> liftA2 resetHead reset counters)
 
+-- | Convenience wrapper for instantiation with inequality
 rotatingCountersLE :: forall domain gated synchronous n a.
                    ( HiddenClockReset domain gated synchronous
                    , SaturatingNum a, Undefined a, KnownNat n

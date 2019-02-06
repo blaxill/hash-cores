@@ -1,15 +1,40 @@
-{-# LANGUAGE NoImplicitPrelude #-}
-{-# LANGUAGE RankNTypes        #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE NoImplicitPrelude      #-}
+{-# LANGUAGE RankNTypes             #-}
 
 module Clash.HashCores.Class.Composition (
   Composition(..),
+  InputSync(..),
+  SyncFn,
   )
   where
 
 import           Clash.Prelude
 
+-- | Output is always synced via static type-level timing.
+-- Input is either synced via type-level timing or DataFlow semantics.
+data InputSync = Typed | Flow
+
+-- | Simple closed type family selection between Typed & Flow synchronizations
+type family SyncFn
+  (inputSync :: InputSync)
+  (domain :: Domain)
+  (reference :: Nat)
+  (delay :: Nat)
+  (a :: *)
+  where
+    -- | Synchronization purely on delay annotation
+    SyncFn 'Typed domain reference delay a
+      = DSignal domain (reference+delay) a -- Out
+
+    -- | Synchronization with DataFlow semantics
+    SyncFn 'Flow domain reference delay a
+      = DSignal domain reference Bool          -- In valid
+      -> ( DSignal domain (reference+delay) a  -- Out
+         , DSignal domain reference Bool)      -- In ready
+
 -- |
-class Composition x where
+class Composition x (inputSync :: InputSync) | x -> inputSync where
   indexedCompose ::
     ( HiddenClockReset domain gated synchronous
     , KnownNat i
@@ -21,7 +46,7 @@ class Composition x where
         -> DSignal domain t0' a
         -> DSignal domain (t0'+delay) a
        )
-    -> DSignal domain t0 a                -- In
-    -> DSignal domain t0 Bool             -- Valid
-    -> ( DSignal domain (t0+(i*delay)) a  -- Out
-       , DSignal domain t0 Bool)          -- Ready
+    -- | In signal
+    -> DSignal domain reference a
+    -- | Synchronization semantics
+    -> SyncFn inputSync domain reference (i*delay) a

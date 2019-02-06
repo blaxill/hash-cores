@@ -40,7 +40,7 @@ instance Default Pipelined where
 
 -- | Pipeline that has @Rounds hash@ number of instantiated units, giving a
 -- throughput of 1 hash per cycle.
-instance Composition Pipelined where
+instance Composition Pipelined 'Typed where
   indexedCompose ::
     forall domain gated synchronous t0 t1 x xn1 a .
     ( HiddenClockReset domain gated synchronous
@@ -52,12 +52,10 @@ instance Composition Pipelined where
         -> DSignal domain t0' a
         -> DSignal domain (t0'+t1) a
        )
-    -> DSignal domain t0 a                -- In
-    -> DSignal domain t0 Bool             -- Valid
-    -> ( DSignal domain (t0+(x*t1)) a   -- Out
-       , DSignal domain t0 Bool )       -- Ready
-  indexedCompose Pipelined f input _ = (,pure True)
-      . dfold (Proxy @(PipelineStep domain t0 _ a))
+    -> DSignal domain t0 a            -- In
+    -> DSignal domain (t0+(x*t1)) a   -- Out
+  indexedCompose Pipelined f input =
+        dfold (Proxy @(PipelineStep domain t0 _ a))
           pipe
           (f 0)
           (reverse . drop d1 . indices $ SNat @(1+xn1))

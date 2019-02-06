@@ -100,19 +100,18 @@ pipelinedSample sha input = sampled
     core'
       :: ( HiddenClockReset domain gated synchronous )
       => DSignal domain 0 (Block (SHA256 p1 p2))
-      -> DSignal domain 0 Bool
       -> DSignal domain (0 + (64 * ((2 * p1) + p2))) (Hash (SHA256 p1 p2))
-    core' x v = fst $ singleBlockCore (Pipelined :. sha) x v
+    core' x = singleBlockPipe (Pipelined :. sha) x
 
     timing = 1+64*(2*(snatToNum (SNat @p1))+snatToNum (SNat @p2))
 
     processed = preprocess . B8.unpack . unsingleBlock $ input
     dut = withClockReset systemClockGen systemResetGen $
-      toSignal (core' (pure processed) (pure True) )
+      toSignal (core' (pure processed))
     sampled = P.last (sampleN timing dut)
 
 qcProps = testGroup "(checked by QuickCheck)"
-  [ QC.testProperty "\\SingleBlock x -> nativeSHA256 x == hashCoreSHA256 sha x" $
+  [ QC.testProperty "Hashes random single block" $
       \sha x ->
         case runSomeSHA sha pipelinedSample' x of
           Nothing -> discard
@@ -120,7 +119,7 @@ qcProps = testGroup "(checked by QuickCheck)"
   ]
 
 scProps = testGroup "(checked by SmallCheck)"
-  [ SC.testProperty "\\nativeHash 'The quick brown fox jumps over the lazy dog' == sha <..>" $
+  [ SC.testProperty "Hash 'The quick brown fox jumps over the lazy dog'" $
       \sha -> not (isZero sha) SC.==>
         runSomeSHA sha pipelinedSample' tqbf == Just (nativeSHA256 tqbf)
   ]
@@ -130,4 +129,5 @@ scProps = testGroup "(checked by SmallCheck)"
 properties :: TestTree
 properties = testGroup "Properties" [qcProps, scProps]
 
-tests = testGroup "SHA-256 composed with Pipelined, (SHA-256 @0 @0 will be ignored or discarded)" [properties]
+-- | SHA-256 @0 @0 will be ignored or discarded
+tests = testGroup "Pipelined :. SHA-256 @X @Y" [properties]

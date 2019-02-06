@@ -48,12 +48,12 @@ hashCoreSHA256 = hashTester (SHA256 @0 @0)
     . preprocess . B8.unpack . unsingleBlock
 
 qcProps = testGroup "(checked by QuickCheck)"
-  [ QC.testProperty "\\SingleBlock x -> nativeSHA256 x == hashCoreSHA256 x" $
+  [ QC.testProperty "Hashes random single block" $
       \x -> nativeSHA256 x == hashCoreSHA256 x
   ]
 
 unitTests = testGroup "Unit tests"
-  [ testCase "Hash 'The quick brown fox jumps over the lazy dog' == <..>" $ do
+  [ testCase "Hash 'The quick brown fox jumps over the lazy dog'" $ do
       let tqbf = SingleBlock (B8.pack "The quick brown fox jumps over the lazy dog")
 
       hashCoreSHA256 tqbf == 0xd7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592
@@ -61,7 +61,7 @@ unitTests = testGroup "Unit tests"
   ]
 
 tests :: TestTree
-tests = testGroup "SHA-256 without a composition" [properties, unitTests]
+tests = testGroup "SHA-256 primitive" [unitTests, properties]
 
 properties :: TestTree
 properties = testGroup "Properties" [qcProps]
