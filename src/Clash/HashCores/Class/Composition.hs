@@ -12,10 +12,10 @@ module Clash.HashCores.Class.Composition (
 import           Clash.Prelude
 
 -- | Output is always synced via static type-level timing.
--- Input is either synced via type-level timing or DataFlow semantics.
+-- Input is either always valid or synced with DataFlow semantics.
 data InputSync
-  = Always -- ^ Input is always valid
-  | Flow  -- ^ Input follows dataflow semantics
+  = Always       -- ^ Input is always valid
+  | Flow         -- ^ Input follows dataflow semantics
 
 -- | Simple closed type family selection between Always & Flow synchronizations
 type family SyncFn
@@ -27,13 +27,13 @@ type family SyncFn
   where
     -- | Synchronization purely on delay annotation
     SyncFn 'Always domain reference delay a
-      = DSignal domain (reference+delay) a -- Out
+      = DSignal domain (reference+delay) a       -- Out
 
     -- | Synchronization with DataFlow semantics
     SyncFn 'Flow domain reference delay a
-      = DSignal domain reference Bool          -- In valid
-      -> ( DSignal domain (reference+delay) a  -- Out
-         , DSignal domain reference Bool)      -- In ready
+      = DSignal domain reference Bool            -- In valid
+        -> ( DSignal domain (reference+delay) a  -- Out
+           , DSignal domain reference Bool)      -- In ready
 
 -- |
 class Composition x (inputSync :: InputSync) | x -> inputSync where
@@ -48,7 +48,9 @@ class Composition x (inputSync :: InputSync) | x -> inputSync where
         -> DSignal domain t0' a
         -> DSignal domain (t0'+delay) a
        )
+
     -- | In signal
     -> DSignal domain reference a
-    -- | Synchronization semantics
+
+    -- | Defines input synchronization semantics
     -> SyncFn inputSync domain reference (i*delay) a

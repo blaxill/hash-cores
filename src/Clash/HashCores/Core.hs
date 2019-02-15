@@ -53,7 +53,7 @@ singleBlockPipe ::
      , 1 <= CompressionDelay hash
      , 1 <= CompressionRounds hash
      )
-     => Core Pipelined 'Typed hash
+     => Core Pipelined 'Always hash
      -> DSignal domain reference (Block hash)
      -> DSignal domain (reference+(CompressionRounds hash*CompressionDelay hash)) (Hash hash)
 singleBlockPipe core@(_ :. hash) =
