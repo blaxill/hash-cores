@@ -40,7 +40,7 @@ instance Default Pipelined where
 
 -- | Pipeline that has @Rounds hash@ number of instantiated units, giving a
 -- throughput of 1 hash per cycle.
-instance Composition Pipelined 'Typed where
+instance Composition Pipelined 'Always where
   indexedCompose ::
     forall domain gated synchronous t0 t1 x xn1 a .
     ( HiddenClockReset domain gated synchronous

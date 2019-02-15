@@ -13,9 +13,11 @@ import           Clash.Prelude
 
 -- | Output is always synced via static type-level timing.
 -- Input is either synced via type-level timing or DataFlow semantics.
-data InputSync = Typed | Flow
+data InputSync
+  = Always -- ^ Input is always valid
+  | Flow  -- ^ Input follows dataflow semantics
 
--- | Simple closed type family selection between Typed & Flow synchronizations
+-- | Simple closed type family selection between Always & Flow synchronizations
 type family SyncFn
   (inputSync :: InputSync)
   (domain :: Domain)
@@ -24,7 +26,7 @@ type family SyncFn
   (a :: *)
   where
     -- | Synchronization purely on delay annotation
-    SyncFn 'Typed domain reference delay a
+    SyncFn 'Always domain reference delay a
       = DSignal domain (reference+delay) a -- Out
 
     -- | Synchronization with DataFlow semantics
