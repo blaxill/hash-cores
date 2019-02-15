@@ -1,6 +1,5 @@
 {-# LANGUAGE GADTs                #-}
 {-# LANGUAGE NoImplicitPrelude    #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 module Clash.HashCores.Core (
   Core(..),
