@@ -18,6 +18,7 @@ library
                      , Clash.HashCores.Compositions
                      , Clash.HashCores.Hash.SHA256
                      , Clash.HashCores.Hashes
+                     , Clash.HashCores.Generators.Counter
                      , Clash.HashCores.TH
   default-extensions: DataKinds
                       FlexibleContexts
