@@ -1,5 +1,6 @@
 -- | SHA-256 https://en.wikipedia.org/wiki/SHA-2
 
+{-# LANGUAGE BinaryLiterals            #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE GADTs                     #-}
 {-# LANGUAGE MagicHash                 #-}
@@ -21,6 +22,7 @@ module Clash.HashCores.Hash.SHA256
   someSHA256,
 
   preprocessI,
+  preprocessBytes,
   preprocess
   )
 where
@@ -74,11 +76,25 @@ kRom = asyncRom $(listToVecTH [
 
 -- | Preprocess an @n@ <= 447 bit 'BitVector' into a single SHA-256 message
 -- block by performing the SHA-256 preprocessing step. Not efficient.
-preprocessI :: (KnownNat n, n <= 447) => BitVector n -> BitVector 512
+preprocessI :: (KnownNat n, KnownNat m, n <= 447, ((n+1)+m)~448)
+            => BitVector n -> BitVector 512
 preprocessI m =
-  let extended = resize (m ++# (1 :: BitVector 1)) :: BitVector 448
-      shifted  = shiftL extended (447 - fromInteger (natVal m))
-  in pack $ map v2bv (unconcat d32 $ bv2v shifted) ++ (0 :> fromInteger (natVal m) :> Nil)
+  let extended = m ++# (1 :: BitVector 1) ++# 0 :: BitVector 448
+  in pack $ map v2bv (unconcat d32 $ bv2v extended) ++ (0 :> fromInteger (natVal m) :> Nil)
+
+preprocessBytes :: (KnownNat n, KnownNat m, n <= 447, (n+m)~448)
+                => BitVector n -> Integer -> BitVector 512
+preprocessBytes m bytes =
+  let extended = m ++# 0 :: BitVector 448
+      bytes8 = bytes * 8
+      shifted = rotateLeft (unconcatBitVector# extended) (55 - bytes)
+      replacedBytes = pack $ izipWith (\i b v -> case compare (fromIntegral i) b of
+                              LT ->  v
+                              EQ -> 0b10000000
+                              GT -> 0
+                              ) (replicate d56 bytes) shifted
+  in pack $ (unconcatBitVector# replacedBytes) ++ ((0 :: BitVector 32) :> fromInteger bytes8 :> Nil)
+
 
 -- | Turn a 'String' with length < 56 into a single SHA-256 message block by
 -- performing the SHA-256 preprocessing step. (Non synthesizable)
