@@ -13,7 +13,7 @@ library
   exposed-modules:     Clash.HashCores.Core
                      , Clash.HashCores.Class.Iterable
                      , Clash.HashCores.Class.Composition
-                     , Clash.HashCores.Composition.Iterated
+                     , Clash.HashCores.Composition.InPlace
                      , Clash.HashCores.Composition.Pipelined
                      , Clash.HashCores.Compositions
                      , Clash.HashCores.Hash.SHA256
