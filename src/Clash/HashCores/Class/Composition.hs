@@ -3,54 +3,49 @@
 {-# LANGUAGE RankNTypes             #-}
 
 module Clash.HashCores.Class.Composition (
-  Composition(..),
-  InputSync(..),
-  SyncFn,
+  Input(..),
+  Composition,
+  indexedCompose,
+  IsValid,
+  IsReady,
   )
   where
 
+import           Clash.HashCores.Class.Iterable
 import           Clash.Prelude
 
 -- | Output is always synced via static type-level timing.
 -- Input is either always valid or synced with DataFlow semantics.
-data InputSync
-  = Always       -- ^ Input is always valid
-  | Flow         -- ^ Input follows dataflow semantics
+data Input
+  = Always            -- ^ Input is always valid
+  | ValidReadyFlagged -- ^ Input follows dataflow semantics
 
--- | Simple closed type family selection between Always & Flow synchronizations
-type family SyncFn
-  (inputSync :: InputSync)
-  (domain :: Domain)
-  (reference :: Nat)
-  (delay :: Nat)
-  (a :: *)
+type IsValid = Bool
+type IsReady = Bool
+
+type family Incoming (inputSemantics :: Input) (a :: *) where
+  Incoming 'Always a = a
+  Incoming 'ValidReadyFlagged a = (a, IsValid)
+
+type family Outgoing (inputSemantics :: Input) (a :: *) where
+  Outgoing 'Always a = ()
+  Outgoing 'ValidReadyFlagged a = IsReady
+
+class (Iterable iterable _i s _o r d)
+      => Composition x
+                     iterable
+                     (inputSemantics :: Input)
+                     _i s _o r d | x -> inputSemantics
   where
-    -- | Synchronization purely on delay annotation
-    SyncFn 'Always domain reference delay a
-      = DSignal domain (reference+delay) a       -- Out
+    indexedCompose ::
+      ( HiddenClockReset domain gated synchronous
+      , KnownNat reference )
+      => x
+      -> iterable
 
-    -- | Synchronization with DataFlow semantics
-    SyncFn 'Flow domain reference delay a
-      = DSignal domain reference Bool            -- In valid
-        -> ( DSignal domain (reference+delay) a  -- Out
-           , DSignal domain reference Bool)      -- In ready
+      -- | In signal
+      -> DSignal domain reference (Incoming inputSemantics s)
 
--- |
-class Composition x (inputSync :: InputSync) | x -> inputSync where
-  indexedCompose ::
-    ( HiddenClockReset domain gated synchronous
-    , KnownNat i
-    , 1 <= i
-    , 1 <= delay)
-    => x
-    -- | Function to compose: index -> state -> state
-    -> ( forall t0'. DSignal domain t0' (Index i)
-        -> DSignal domain t0' a
-        -> DSignal domain (t0'+delay) a
-       )
-
-    -- | In signal
-    -> DSignal domain reference a
-
-    -- | Defines input synchronization semantics
-    -> SyncFn inputSync domain reference (i*delay) a
+      -- | Out signal
+      -> ( DSignal domain  reference        (Outgoing inputSemantics s)
+         , DSignal domain (reference + r*d)                          s  )

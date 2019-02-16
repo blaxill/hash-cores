@@ -11,14 +11,14 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Clash.HashCores.Core
-                     , Clash.HashCores.Class.MerkleDamgard
+                     , Clash.HashCores.Class.Iterable
                      , Clash.HashCores.Class.Composition
                      , Clash.HashCores.Composition.Iterated
                      , Clash.HashCores.Composition.Pipelined
                      , Clash.HashCores.Compositions
                      , Clash.HashCores.Hash.SHA256
                      , Clash.HashCores.Hashes
-                     , Clash.HashCores.Generators.Counter
+                     -- , Clash.HashCores.Generator.Counter
                      , Clash.HashCores.TH
   default-extensions: DataKinds
                       FlexibleContexts

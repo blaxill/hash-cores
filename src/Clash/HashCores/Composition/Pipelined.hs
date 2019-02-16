@@ -1,6 +1,3 @@
--- A pipeline construction in which each stage is a separate component delayed
--- according to the MerkleDamgard compression function definition used at
--- instantiation.
 --    ┌─────┐  ┌─────┐  ┌─────┐  ┌─────┐
 -- ──▶│  1  ├─▶│  2  ├─▶│  …  ├─▶│  n  ├─▶
 --    └─────┘  └─────┘  └─────┘  └─────┘
@@ -25,9 +22,8 @@ import           Data.Proxy
 import           Data.Singletons.Prelude           (type (@@), Apply, TyFun)
 
 import           Clash.HashCores.Class.Composition
+import           Clash.HashCores.Class.Iterable
 
--- | Pipeline that has @Rounds hash@ number of instantiated units, giving a
--- throughput of 1 hash per cycle.
 data Pipelined = Pipelined deriving Show
 
 data PipelineStep :: Domain -> Nat -> Nat -> * -> TyFun Nat * -> *
@@ -38,30 +34,25 @@ type instance Apply (PipelineStep domain t0 delay s) i
 instance Default Pipelined where
   def = Pipelined
 
--- | Pipeline that has @Rounds hash@ number of instantiated units, giving a
--- throughput of 1 hash per cycle.
-instance Composition Pipelined 'Always where
-  indexedCompose ::
-    forall domain gated synchronous t0 t1 x xn1 a .
-    ( HiddenClockReset domain gated synchronous
-    , KnownNat xn1
-    , 1 <= x
-    , xn1 ~ (x - 1))
-    => Pipelined
-    -> ( forall t0'. DSignal domain t0' (Index x)
-        -> DSignal domain t0' a
-        -> DSignal domain (t0'+t1) a
-       )
-    -> DSignal domain t0 a            -- In
-    -> DSignal domain (t0+(x*t1)) a   -- Out
-  indexedCompose Pipelined f input =
-        dfold (Proxy @(PipelineStep domain t0 _ a))
+instance (Iterable iterable _i s _o r d) => Composition Pipelined iterable 'Always _i s _o r d where
+  indexedCompose :: forall domain gated synchronous reference .
+      ( HiddenClockReset domain gated synchronous)
+      => Pipelined
+      -> iterable
+      -- | In signal
+      -> DSignal domain reference s
+      -- | Out signal
+      -> ( DSignal domain  reference        ()
+         , DSignal domain (reference + r*d) s  )
+
+  indexedCompose Pipelined iterable input = (pure (),) $
+        dfold (Proxy @(PipelineStep domain reference _ s))
           pipe
-          (f 0)
-          (reverse . drop d1 . indices $ SNat @(1+xn1))
+          (oneStep iterable 0)
+          (reverse . drop d1 . indices $ SNat @(1+(r-1)))
       $ input
     where
-      pipe :: SNat l -> Index x
-        -> PipelineStep domain t0 t1 a @@ l
-        -> PipelineStep domain t0 t1 a @@ (l+1)
-      pipe _ i f' = f (pure i) . f'
+      pipe :: SNat l -> Index r
+        -> PipelineStep domain reference d s @@ l
+        -> PipelineStep domain reference d s @@ (l+1)
+      pipe _ i f' = oneStep iterable (pure i) . f'

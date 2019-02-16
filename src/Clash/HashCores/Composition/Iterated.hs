@@ -1,14 +1,13 @@
--- An iterated construction in which each stage of the hash is processed
--- by the same unit.
---    ┌───────────────┐
--- ─┬▶│  compression  ├┬─▶
---  │ └───────────────┘│
---  └──────────────────┘
+--    ┌─────┐
+-- ─┬▶│  f  ├┬─▶
+--  │ └─────┘│
+--  └────────┘
 
 {-# LANGUAGE InstanceSigs          #-}
 {-# LANGUAGE NoImplicitPrelude     #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE ViewPatterns            #-}
 
 {-# OPTIONS_GHC -fplugin GHC.TypeLits.Normalise       #-}
 {-# OPTIONS_GHC -fplugin GHC.TypeLits.KnownNat.Solver #-}
@@ -21,49 +20,41 @@ module Clash.HashCores.Composition.Iterated (
 import           Clash.Prelude
 
 import           Clash.HashCores.Class.Composition
+import           Clash.HashCores.Class.Iterable
+
+import           Clash.Signal.Delayed.Bundle as B
 
 -- | A core that iterates in place without explicit storage of state (although
 -- implicitly stored in the iterated function), by connecting input to output
 -- and tracking iteration indices.
-data Iterated (slots::Nat) = Iterated deriving Show
+data Iterated = Iterated deriving Show
 
-instance (KnownNat slots, 1 <= slots) => Composition (Iterated slots) 'Flow where
-  indexedCompose ::
-    forall domain gated synchronous t0 t1 x xn1 a .
-    ( HiddenClockReset domain gated synchronous
-    , KnownNat xn1
-    , 1 <= x
-    , xn1 ~ (x - 1))
-    => Iterated slots
-    -> ( forall t0'. DSignal domain t0' (Index x)
-        -> DSignal domain t0' a
-        -> DSignal domain (t0'+t1) a
-       )
-    -- | Input value has DataFlow semantics- value/valid/ready
-    -- Value and valid are inputs, ready is output we signal.
-    -- If
-    -> DSignal domain t0 a                -- In
-    -> DSignal domain t0 Bool             -- Valid
-    -> ( DSignal domain (t0+(x*t1)) a     -- Out
-       , DSignal domain t0 Bool)          -- Ready
-  indexedCompose _iterated f input valid =
+instance (Iterable iterable _i s _o r d) => Composition Iterated iterable 'ValidReadyFlagged _i s _o r d where
+  indexedCompose :: forall domain gated synchronous reference.
+      ( HiddenClockReset domain gated synchronous 
+      , KnownNat reference)
+      => Iterated
+      -> iterable
+      -- | In signal
+      -> DSignal domain reference (s, IsValid)
+      -- | Out signal
+      -> ( DSignal domain  reference        (IsReady)
+         , DSignal domain (reference + r*d)        s  )
+  indexedCompose Iterated iterable (B.unbundle -> (input,valid)) =
   -- XXX: Our type safety breaks down in here!
-      ( unsafeFromSignal state
-      , unsafeFromSignal ready )
+      ( unsafeFromSignal ready
+      , unsafeFromSignal state )
     where
-      -- | Basic idea is to use an Index larger than iteration count, so we can
-      -- saturate at some value above our iteration count to represent "done"
-
       accept = toSignal valid .==. ready
 
-      rounds = snatToNum (SNat @x)
+      rounds = snatToNum (SNat @r)
 
-      counters :: Signal domain (Index (3 + x))
-      counters = rotatingCountersLE (SNat @slots) (rounds+1) SatBound accept
+      counters :: Signal domain (Index (3 + d))
+      counters = rotatingCountersLE (SNat @d) (rounds+1) SatBound accept
 
-      state :: Signal domain a
+      state :: Signal domain s
       state = toSignal
-        ( f
+        ( oneStep iterable
           (unsafeFromSignal $ resize . min (rounds-1) <$> counters)
           (unsafeFromSignal $ mux accept (toSignal input) state)
         )

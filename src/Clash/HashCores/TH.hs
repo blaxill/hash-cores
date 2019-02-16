@@ -1,4 +1,4 @@
--- | Extra utility functions
+-- | Template Haskell utilities
 
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE TemplateHaskell   #-}

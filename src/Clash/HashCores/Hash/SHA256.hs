@@ -35,7 +35,7 @@ import qualified Data.Char                           as C (ord)
 import           Data.Proxy                          (Proxy)
 import qualified Prelude                             as P
 
-import           Clash.HashCores.Class.MerkleDamgard
+import           Clash.HashCores.Class.Iterable
 
 type Word32 = BitVector 32
 
@@ -71,8 +71,7 @@ kRom = asyncRom $(listToVecTH [
     0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
     :: BitVector 32])
 
--- * Preprocessing functions. These should ideally be merged into the
--- Merkle-Damgard definiton
+-- * Preprocessing functions. 
 
 -- | Preprocess an @n@ <= 447 bit 'BitVector' into a single SHA-256 message
 -- block by performing the SHA-256 preprocessing step. Not efficient.
@@ -127,36 +126,24 @@ instance (KnownNat adderDelay, KnownNat finalDelay)
 instance (KnownNat a, KnownNat b) => Default (SHA256 a b) where
   def = SHA256 @a @b
 
--- | Existential SHA-256 wrapper
-data SomeSHA256
-  = forall a b . (KnownNat a, KnownNat b) => SomeSHA256 (SHA256 a b)
-
--- | SomeSHA256 from SomeNat's
-someSHA256 :: SomeNat -> SomeNat -> SomeSHA256
-someSHA256 (SomeNat a) (SomeNat b) = someSHA256' a b
-  where
-    someSHA256' :: forall a b. (KnownNat a, KnownNat b)
-                => Proxy a -> Proxy b -> SomeSHA256
-    someSHA256' _ _ = SomeSHA256 (SHA256 @a @b)
-
-instance Show SomeSHA256 where
-  show (SomeSHA256 sha256) = show sha256
-
 instance ( KnownNat adderDelay
          , KnownNat finalDelay
-         ) => MerkleDamgard (SHA256 adderDelay finalDelay) where
-  type BlockSize (SHA256 adderDelay finalDelay) = 512
-  type State (SHA256 adderDelay finalDelay) = (Vec 16 Word32, Vec 8 Word32)
-  type HashSize (SHA256 adderDelay finalDelay) = 256
+         , KnownNat totalDelay
+         , totalDelay ~ ((2*adderDelay) + finalDelay)
+         , 1 <= totalDelay)
+         => Iterable
+            (SHA256 adderDelay finalDelay)
+            (BitVector 512)               -- Input
+            (Vec 16 Word32, Vec 8 Word32) -- State
+            (BitVector 256)               -- Output
+            64                            -- Rounds
+            totalDelay                    -- Delay
+            where
 
-  type CompressionRounds (SHA256 adderDelay finalDelay) = 64
+  preIteration  _ = (, initial) . unpack
+  postIteration _ = pack . zipWith (+) initial . snd
 
-  type CompressionDelay (SHA256 adderDelay finalDelay) = (2*adderDelay) + finalDelay
-
-  precompression _cfg = (, initial) . unpack
-  postcompression _cfg = pack . zipWith (+) initial . snd
-
-  compression _cfg i s = delayN (SNat @finalDelay) $ bundle (schedule', state')
+  oneStep _sha i s = delayN (SNat @finalDelay) $ bundle (schedule', state')
     where
       (schedule, state) = unbundle s
       k = kRom <$> i
@@ -201,3 +188,19 @@ instance ( KnownNat adderDelay
       schedule' = (<<+)
                  <$> delayI schedule
                  <*> delayedFold (SNat @adderDelay) (+) (unbundle $ scheduling <$> schedule)
+
+-- | Existential SHA-256 wrapper
+data SomeSHA256
+  = forall a b . (KnownNat a, KnownNat b) => SomeSHA256 (SHA256 a b)
+
+instance Show SomeSHA256 where
+  show (SomeSHA256 sha256) = show sha256
+
+-- | SomeSHA256 from SomeNat's
+someSHA256 :: SomeNat -> SomeNat -> SomeSHA256
+someSHA256 (SomeNat a) (SomeNat b) = someSHA256' a b
+  where
+    someSHA256' :: forall a b. (KnownNat a, KnownNat b)
+                => Proxy a -> Proxy b -> SomeSHA256
+    someSHA256' _ _ = SomeSHA256 (SHA256 @a @b)
+
