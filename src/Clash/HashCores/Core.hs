@@ -1,9 +1,12 @@
 {-# LANGUAGE GADTs                #-}
 {-# LANGUAGE NoImplicitPrelude    #-}
 
+-- To allow unused constraint parameters that are specified 
+-- by a functional dependency
+{-# LANGUAGE UndecidableInstances #-}
+
 module Clash.HashCores.Core (
   Core(..),
-  -- hashCore,
   singleBlockPipe,
   )
   where
@@ -13,32 +16,39 @@ import           Clash.HashCores.Class.Iterable
 import           Clash.HashCores.Compositions        (Pipelined)
 import           Clash.Prelude
 
+-- | Wrap a composition and iterable with some input semantics and a known 
+-- input to output delay.
 data Core
   (composition :: *)
   (iterable :: *)
   (inputSemantics :: Input)
-  i s o
-  (r :: Nat)
+  i o
   (d :: Nat)
   where
-    (:.) :: (Composition composition iterable inputSemantics i s o r d)
+    -- | Interal state parameter @s@ is hidden, and rounds @r@ delay @d@ are 
+    -- combined for their total delay.
+    (:.) :: forall composition iterable inputSemantics i s o r d.
+         ( Composition composition iterable inputSemantics i s o r d)
          => composition
          -> iterable
-         -> Core composition iterable inputSemantics i s o r d
+         -> Core composition iterable inputSemantics i o (r*d)
 
 -- | Construct a core by its type
 instance ( Default composition
          , Default iterable
-         , Composition composition iterable inputSemantics i s o r d)
-         => Default (Core composition iterable inputSemantics i s o r d) where
+         , Composition composition iterable inputSemantics i s o r d
+         , d' ~ (r*d)
+         )
+         => Default (Core composition iterable inputSemantics i o d') where
   def = def :. def
 
+-- | 
 singleBlockPipe ::
      ( HiddenClockReset domain gated synchronous
      , Iterable iterable i s o r d
      , KnownNat reference
      )
-     => Core Pipelined iterable 'Always i s o r d
+     => Core Pipelined iterable 'Always i o (r*d)
      -> DSignal domain reference i
      -> DSignal domain (reference+r*d) o
 singleBlockPipe (c :. f) =
