@@ -1,4 +1,4 @@
-# dsignal-hash-cores
+# hash-cores
 
 An experimental Clash based hash core library testing type level parametric hash core design.
 

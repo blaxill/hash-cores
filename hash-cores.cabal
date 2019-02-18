@@ -1,4 +1,4 @@
-name:                dsignal-hash-cores
+name:                hash-cores
 version:             0.1.0.0
 license:             BSD3
 author:              Ben Blaxill
@@ -13,12 +13,13 @@ library
   exposed-modules:     Clash.HashCores.Core
                      , Clash.HashCores.Class.Iterable
                      , Clash.HashCores.Class.Composition
+                     , Clash.HashCores.Class.Paddable
                      , Clash.HashCores.Composition.InPlace
                      , Clash.HashCores.Composition.Pipelined
                      , Clash.HashCores.Compositions
                      , Clash.HashCores.Hash.SHA256
                      , Clash.HashCores.Hashes
-                     -- , Clash.HashCores.Generator.Counter
+                     , Clash.HashCores.Generator.Counter
                      , Clash.HashCores.TH
   default-extensions: DataKinds
                       FlexibleContexts
@@ -40,6 +41,7 @@ library
                      , clash-prelude
                      , lens
                      , deepseq
+                     , bytestring
                      , QuickCheck
                      , template-haskell
                      , deepseq
@@ -51,7 +53,7 @@ library
   ghc-options: -Wall -Werror -Wwarn=incomplete-patterns
                              -- ^ GADTs confuse incomplete-patterns
 
-executable dsignal-hash-cores-test
+executable hash-cores-test
   hs-source-dirs:      test
   main-is:             Spec.hs
   default-extensions: DataKinds
@@ -71,7 +73,7 @@ executable dsignal-hash-cores-test
                      , ghc-typelits-extra
                      , ghc-typelits-natnormalise
                      , ghc-typelits-knownnat
-                     , dsignal-hash-cores
+                     , hash-cores
                      , clash-prelude
                      , hspec
                      , QuickCheck
