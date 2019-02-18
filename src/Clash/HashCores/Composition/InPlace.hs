@@ -45,7 +45,7 @@ instance (Iterable iterable _i s _o r d) => Composition InPlace iterable 'ValidR
       ( unsafeFromSignal ready
       , unsafeFromSignal state )
     where
-      accept = toSignal valid .==. ready
+      accept = toSignal valid .==. (ready .==. pure True)
 
       rounds = snatToNum (SNat @r)
 
