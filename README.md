@@ -1,62 +1,55 @@
 # hash-cores
 
-An experimental Clash based hash core library testing type level parametric hash core design.
+An experimental Clash based hash library testing type level parametric hash core design. Expressive types determine the timing of hash functions:
+
+~~~haskell
+type MySHA = Core Pipelined
+                  (SHA256 1 1)    -- SHA256 with timing parameters
+                  'Always         -- Input validity semantics
+                  (BitVector 512) -- Input shape
+                  (BitVector 256) -- Output shape
+                  192             -- Input to output timing
+					
+-- Construct value representation either explicitly 
+λ> Pipelined :. (SHA256 @1 @1)
+(:.) Pipelined SHA-256 d1 d1
+
+-- Or with default instance, via type annotation
+λ> def :: MySHA
+(:.) Pipelined SHA-256 d1 d1
+
+~~~
+
+Note: The choice of `Pipelined` and `SHA256 @1 @1` fully determines the other parameters:
+
+~~~haskell
+λ> type MySHA = Core Pipelined (SHA256 1 1) 'Always (BitVector 512) (BitVector 256) 192
+λ> def :: MySHA
+(:.) Pipelined SHA-256 d1 d1
+
+λ> type FailMySHA = Core Pipelined (SHA256 1 1) 'Always (BitVector 512) (BitVector 256) 333
+λ> def :: FailMySHA
+
+<interactive>:69:1: error:
+    • Couldn't match type ‘192’ with ‘333’ arising from a use of ‘def’
+    • In the expression: def :: FailMySHA
+      In an equation for ‘it’: it = def :: FailMySHA
+~~~
 
 First stops:
 
-- [HashCores/Class/MerkleDamgard.hs](https://github.com/blaxill/dsignal-hash-cores/blob/master/src/Clash/HashCores/Class/MerkleDamgard.hs)
-- [HashCores/Hash/SHA256.hs](https://github.com/blaxill/dsignal-hash-cores/blob/master/src/Clash/HashCores/Hash/SHA256.hs)
-- [HashCores/Composition/Pipelined.hs](https://github.com/blaxill/dsignal-hash-cores/blob/master/src/Clash/HashCores/Composition/Pipelined.hs)
+- [src/Clash/HashCores/Class/*](https://github.com/blaxill/dsignal-hash-cores/blob/master/src/Clash/HashCores/Class/)
+- [src/Clash/HashCores/Core.hs](https://github.com/blaxill/dsignal-hash-cores/blob/master/src/Clash/HashCores/Core.hs)
+- [src/Clash/HashCores/Hash/Sha](https://github.com/blaxill/dsignal-hash-cores/blob/master/src/Clash/HashCores/SHA256.hs)
+
 
 ### Usage
 
-Compose a chosen hash function with a chosen composition strategy. Check `examples/TopEntities.hs` for simple examples:
-
-~~~
-systemClockSHAIterated
-  :: Clock System Source
-  -> Reset System Asynchronous
-  -> DSignal System 0 (Block (SHA256 0 1))
-  -> DSignal System 0 Bool
-  -> ( DSignal System 64 (Hash (SHA256 0 1))
-     , DSignal System 0 Bool )
-systemClockSHAIterated = exposeClockReset (singleBlockCore (Iterated @1 :. SHA256 @0 @1))
-{-# ANN systemClockSHAIterated
-  (Synthesize
-    { t_name   = "shaIterated"
-    , t_inputs = [ PortName "clk"
-                 , PortName "rst"
-                 , PortName "block"
-                 , PortName "ready"
-                 ]
-    , t_output = PortProduct "" [PortName "hash", PortName "valid"]
-    }) #-}
-{-# NOINLINE systemClockSHAIterated #-}
-
-systemClockSHAPipelined
-  :: Clock System Source
-  -> Reset System Asynchronous
-  -> DSignal System 0 (Block (SHA256 0 1))
-  -> DSignal System 0 Bool
-  -> ( DSignal System 64 (Hash (SHA256 0 1))
-     , DSignal System 0 Bool )
-systemClockSHAPipelined = exposeClockReset (singleBlockCore (Pipelined :. SHA256 @0 @1))
-{-# ANN systemClockSHAPipelined
-  (Synthesize
-    { t_name   = "shaPipelined"
-    , t_inputs = [ PortName "clk"
-                 , PortName "rst"
-                 , PortName "block"
-                 , PortName "ready"
-                 ]
-    , t_output = PortProduct "" [PortName "hash", PortName "valid"]
-    }) #-}
-{-# NOINLINE systemClockSHAPipelined #-}
-~~~
+Compose a chosen hash function with a chosen composition strategy. Check `examples/TopEntities.hs` for simple examples.
 
 1. Run the Clash compiler with something like the following:
 
-  `cabal new-run clashi -- -i./dsignal-hash-cores/src/ -fclash-spec-limit=128 -fclash-inline-limit=128 -outputdir output`
+  `cabal new-run clashi -- -i./hash-cores/src/ -fclash-spec-limit=128 -fclash-inline-limit=128 -outputdir output`
 
 2. Then from inside clashi
 
@@ -68,24 +61,23 @@ systemClockSHAPipelined = exposeClockReset (singleBlockCore (Pipelined :. SHA256
 ### Testing
 
 ```bash
-> cabal new-run dsignal-hash-cores-test
-All tests
-  PipelinedSHA256
+> cabal new-run hash-cores-test
+Hash core tests
+  SHA-256 primitive
+    Unit tests
+      Hash 'The quick brown fox jumps over the lazy dog':   OK (0.01s)
     Properties
       (checked by QuickCheck)
-        \sha x -> nativeSHA256 x == hashCoreSHA256 sha x:                  OK (72.19s
+        Hashes random single block (preprocessBytes):       OK (1.10s)
+          +++ OK, passed 100 tests.
+  Pipelined :. SHA-256 @X @Y
+    Properties
+      (checked by QuickCheck)
+        Hashes random single block:                         OK (32.79s)
           +++ OK, passed 100 tests.
       (checked by SmallCheck)
-        \sha -> sha 'The quick brown fox jumps over the lazy dog' == <..>: OK (9.68s)
+        Hash 'The quick brown fox jumps over the lazy dog': OK (7.79s)
           36 tests completed (but 1 did not meet the condition)
-  Tests
-    Properties
-      (checked by QuickCheck)
-        \x -> nativeSHA256 x == hashCoreSHA256 x:                          OK (1.21s)
-          +++ OK, passed 100 tests.
-    Unit tests
-      Hash 'The quick brown fox jumps over the lazy dog' == <..>:          OK (0.01s)
-
-All 4 tests passed (72.19s)
+All 4 tests passed (32.80s)
 ```
 
