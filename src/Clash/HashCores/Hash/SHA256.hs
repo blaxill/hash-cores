@@ -2,8 +2,11 @@
 
 {-# LANGUAGE BinaryLiterals            #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleInstances         #-}
 {-# LANGUAGE GADTs                     #-}
+{-# LANGUAGE InstanceSigs              #-}
 {-# LANGUAGE MagicHash                 #-}
+{-# LANGUAGE MultiParamTypeClasses     #-}
 {-# LANGUAGE NoImplicitPrelude         #-}
 {-# LANGUAGE PartialTypeSignatures     #-}
 {-# LANGUAGE TemplateHaskell           #-}

@@ -2,11 +2,13 @@
 -- ──▶│  1  ├─▶│  2  ├─▶│  …  ├─▶│  n  ├─▶
 --    └─────┘  └─────┘  └─────┘  └─────┘
 
-{-# LANGUAGE InstanceSigs         #-}
-{-# LANGUAGE NoImplicitPrelude    #-}
-{-# LANGUAGE RankNTypes           #-}
-{-# LANGUAGE TupleSections        #-}
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE InstanceSigs          #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NoImplicitPrelude     #-}
+{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE TupleSections         #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 {-# OPTIONS_GHC -fplugin GHC.TypeLits.Normalise       #-}
 {-# OPTIONS_GHC -fplugin GHC.TypeLits.KnownNat.Solver #-}
