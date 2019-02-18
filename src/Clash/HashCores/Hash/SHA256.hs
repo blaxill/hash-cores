@@ -20,27 +20,22 @@ module Clash.HashCores.Hash.SHA256
   SHA256(..),
   SomeSHA256(..),
   someSHA256,
-
-  preprocessI,
-  preprocessBytes,
-  preprocess
   )
 where
 
-import           Clash.Prelude                       hiding (bundle, unbundle)
+import           Clash.Prelude                  hiding (bundle, unbundle)
 import           Clash.Signal.Delayed.Bundle
-import           Clash.Sized.BitVector               ((++#))
+import           Clash.Sized.BitVector          ((++#))
 
-import qualified Data.Char                           as C (ord)
-import           Data.Proxy                          (Proxy)
-import qualified Prelude                             as P
+import           Data.Proxy                     (Proxy)
+import qualified Prelude                        as P
 
 import           Clash.HashCores.Class.Iterable
+import           Clash.HashCores.Class.Paddable
 
 type Word32 = BitVector 32
 
--- * SHA-256 constants
-
+-- SHA-256 initial state
 initial :: Vec 8 Word32
 initial = 0x6a09e667 :>
           0xbb67ae85 :>
@@ -51,6 +46,7 @@ initial = 0x6a09e667 :>
           0x1f83d9ab :>
           0x5be0cd19 :> Nil
 
+-- SHA-256 round parameter K table
 kRom :: Enum addr => addr -> BitVector 32
 kRom = asyncRom $(listToVecTH [
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5,
@@ -71,45 +67,7 @@ kRom = asyncRom $(listToVecTH [
     0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
     :: BitVector 32])
 
--- * Preprocessing functions. 
-
--- | Preprocess an @n@ <= 447 bit 'BitVector' into a single SHA-256 message
--- block by performing the SHA-256 preprocessing step. Not efficient.
-preprocessI :: (KnownNat n, KnownNat m, n <= 447, ((n+1)+m)~448)
-            => BitVector n -> BitVector 512
-preprocessI m =
-  let extended = m ++# (1 :: BitVector 1) ++# 0 :: BitVector 448
-  in pack $ map v2bv (unconcat d32 $ bv2v extended) ++ (0 :> fromInteger (natVal m) :> Nil)
-
-preprocessBytes :: (KnownNat n, KnownNat m, n <= 447, (n+m)~448)
-                => BitVector n -> Integer -> BitVector 512
-preprocessBytes m bytes =
-  let extended = m ++# 0 :: BitVector 448
-      bytes8 = bytes * 8
-      shifted = rotateLeft (unconcatBitVector# extended) (55 - bytes)
-      replacedBytes = pack $ izipWith (\i b v -> case compare (fromIntegral i) b of
-                              LT ->  v
-                              EQ -> 0b10000000
-                              GT -> 0
-                              ) (replicate d56 bytes) shifted
-  in pack $ (unconcatBitVector# replacedBytes) ++ ((0 :: BitVector 32) :> fromInteger bytes8 :> Nil)
-
-
--- | Turn a 'String' with length < 56 into a single SHA-256 message block by
--- performing the SHA-256 preprocessing step. (Non synthesizable)
-preprocess :: String -> BitVector 512
-preprocess m
-  | P.length m > 55 = errorX "Can't turn strings with len > 55 into a single message block"
-  | otherwise = writeLen $
-                flip shiftL (512-(8*(1+P.length m))) $
-                (.|.) 0x80 . next $
-                P.foldl (\bv c -> next bv .|. cToBV c) 0 m
-    where
-      cToBV c = toEnum (C.ord c) :: BitVector 512
-      next bv = shiftL bv 8
-      writeLen bv = bv .|. (8 * toEnum (P.length m))
-
--- | SHA-256 data type
+-- | SHA-256 datatype
 data SHA256 :: Nat
           -> Nat
           -> * where
@@ -189,14 +147,40 @@ instance ( KnownNat adderDelay
                  <$> delayI schedule
                  <*> delayedFold (SNat @adderDelay) (+) (unbundle $ scheduling <$> schedule)
 
--- | Existential SHA-256 wrapper
+instance Paddable (SHA256 x y) 447 512 where
+    padI :: forall n. (KnownNat n, n <= 447)
+         => (SHA256 x y) -> BitVector n -> BitVector 512
+    padI _ msg =
+      let extended = msg ++# (1 :: BitVector 1)
+                         ++# (0 :: BitVector (447 - n)) :: BitVector 448
+      in pack $ map v2bv (unconcat d32 $ bv2v extended)
+                ++ (0 :> fromInteger (natVal msg) :> Nil)
+
+    padBytes :: forall n. (KnownNat n , n <= 447)
+             => (SHA256 x y) -> BitVector n -> Integer -> BitVector 512
+    padBytes _ m bytes =
+      let extended = m ++# (0 :: BitVector (448 - n)) :: BitVector 448
+          bytes8 = bytes * 8
+          shifted = rotateLeft (unconcatBitVector# extended) (55 - bytes)
+          replacedBytes = pack $ izipWith (\i b v ->
+                                 case compare (fromIntegral i) b of
+                                   LT ->  v
+                                   EQ -> 0b10000000
+                                   GT -> 0
+                                 ) (replicate d56 bytes) shifted
+      in pack $ unconcatBitVector# replacedBytes
+                ++ ((0 :: BitVector 32) :> fromInteger bytes8 :> Nil)
+
+-- | Convenience existential wrapper
 data SomeSHA256
-  = forall a b . (KnownNat a, KnownNat b) => SomeSHA256 (SHA256 a b)
+  = forall a b .
+    (KnownNat a, KnownNat b)
+    => SomeSHA256 (SHA256 a b)
 
 instance Show SomeSHA256 where
   show (SomeSHA256 sha256) = show sha256
 
--- | SomeSHA256 from SomeNat's
+-- | 'SomeSHA256' from 'SomeNat's
 someSHA256 :: SomeNat -> SomeNat -> SomeSHA256
 someSHA256 (SomeNat a) (SomeNat b) = someSHA256' a b
   where
