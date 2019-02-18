@@ -18,7 +18,8 @@ import           Test.Tasty.HUnit
 import           Test.Tasty.QuickCheck               as QC
 import           Test.Tasty.SmallCheck               as SC
 
-import           Clash.HashCores.Class.MerkleDamgard
+import           Clash.HashCores.Class.Iterable
+import           Clash.HashCores.Class.Paddable
 import           Clash.HashCores.Hash.SHA256
 
 import           Crypto.Hash.SHA256                  as H
@@ -46,27 +47,24 @@ nativeSHA256 =
   B.foldl (\acc c -> shiftL acc 8 + toInteger c) 0 .
   H.hash . unsingleBlock
 
-hashCoreSHA256 :: SingleBlock -> BitVector 256
-hashCoreSHA256 = hashTester (SHA256 @0 @0)
-    . preprocess . B8.unpack . unsingleBlock
-
 fromBytes :: ByteString -> Integer
 fromBytes = B.foldl' f 0
   where
     f a b = a `shiftL` 8 .|. fromIntegral b
 
-hashCoreSHA2562 :: SingleBlock -> BitVector 256
-hashCoreSHA2562 (SingleBlock block) = hashTester (SHA256 @0 @0)
-    $ preprocessBytes d s
+hashCoreSHA256 :: SingleBlock -> BitVector 256
+hashCoreSHA256 (SingleBlock block) = iterableTester sha
+    $ padBytes sha d s
   where
+    sha = SHA256 @0 @1
     s = toInteger $ B.length block
     d = fromInteger (fromBytes block) :: BitVector 440
 
 qcProps = testGroup "(checked by QuickCheck)"
-  [ QC.testProperty "Hashes random single block (preprocess)" $
+  [ QC.testProperty "Hashes random single block (preprocessBytes)" $
       \x -> nativeSHA256 x == hashCoreSHA256 x
-  , QC.testProperty "Hashes random single block (preprocessBytes)" $
-      \x -> nativeSHA256 x == hashCoreSHA2562 x
+  -- , QC.testProperty "Hashes random single block (preprocessBytes)" $
+  --     \x -> nativeSHA256 x == hashCoreSHA2562 x
   ]
 
 unitTests = testGroup "Unit tests"

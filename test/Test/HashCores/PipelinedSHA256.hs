@@ -17,7 +17,8 @@ import           Test.Tasty.QuickCheck                 as QC
 import           Test.Tasty.SmallCheck                 as SC
 
 
-import           Clash.HashCores.Class.MerkleDamgard
+import           Clash.HashCores.Class.Iterable
+import           Clash.HashCores.Class.Paddable
 import           Clash.HashCores.Composition.Pipelined
 import           Clash.HashCores.Core
 import           Clash.HashCores.Hash.SHA256           as SHA256
@@ -99,13 +100,13 @@ pipelinedSample sha input = sampled
   where
     core'
       :: ( HiddenClockReset domain gated synchronous )
-      => DSignal domain 0 (Block (SHA256 p1 p2))
-      -> DSignal domain (0 + (64 * ((2 * p1) + p2))) (Hash (SHA256 p1 p2))
+      => DSignal domain 0 (BitVector 512)
+      -> DSignal domain (0 + (64 * ((2 * p1) + p2))) (BitVector 256)
     core' x = singleBlockPipe (Pipelined :. sha) x
 
     timing = 1+64*(2*(snatToNum (SNat @p1))+snatToNum (SNat @p2))
 
-    processed = preprocess . B8.unpack . unsingleBlock $ input
+    processed = pad sha . unsingleBlock $ input
     dut = withClockReset systemClockGen systemResetGen $
       toSignal (core' (pure processed))
     sampled = P.last (sampleN timing dut)

@@ -24,6 +24,9 @@ import           Data.Singletons.Prelude           (type (@@), Apply, TyFun)
 import           Clash.HashCores.Class.Composition
 import           Clash.HashCores.Class.Iterable
 
+
+-- | Pipeline a circuit
+--
 data Pipelined = Pipelined deriving Show
 
 data PipelineStep :: Domain -> Nat -> Nat -> * -> TyFun Nat * -> *
