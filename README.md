@@ -54,9 +54,10 @@ Compose a chosen hash function with a chosen composition strategy. Check `exampl
 2. Then from inside clashi
 
   ~~~
-  :l examples/TopEntities.hs`
+  :l examples/TopEntities.hs
   :verilog
   ~~~
+
 
 ### Testing
 
