@@ -40,7 +40,7 @@ First stops:
 
 - [src/Clash/HashCores/Class/*](https://github.com/blaxill/dsignal-hash-cores/blob/master/src/Clash/HashCores/Class/)
 - [src/Clash/HashCores/Core.hs](https://github.com/blaxill/dsignal-hash-cores/blob/master/src/Clash/HashCores/Core.hs)
-- [src/Clash/HashCores/Hash/Sha](https://github.com/blaxill/dsignal-hash-cores/blob/master/src/Clash/HashCores/SHA256.hs)
+- [src/Clash/HashCores/Hash/Sha.hs](https://github.com/blaxill/dsignal-hash-cores/blob/master/src/Clash/HashCores/Hash/SHA256.hs)
 
 
 ### Usage
