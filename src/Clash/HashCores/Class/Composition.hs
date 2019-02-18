@@ -6,6 +6,9 @@ module Clash.HashCores.Class.Composition (
   Input(..),
   Composition,
   indexedCompose,
+
+  isOutputValid,
+
   IsValid,
   IsReady,
   )
@@ -31,16 +34,20 @@ type family Outgoing (inputSemantics :: Input) (a :: *) where
   Outgoing 'Always a = ()
   Outgoing 'ValidReadyFlagged a = IsReady
 
+-- | Compose an 'iterable' function with some 'composition'. This is analogous to
+-- "fold iterable [0..r]", but also determines the circuit layout. Output
+-- validity should be solely determined when input is accepted and the timing
+-- @r@*@d@.
 class (Iterable iterable _i s _o r d)
-      => Composition x
+      => Composition composition
                      iterable
                      (inputSemantics :: Input)
-                     _i s _o r d | x -> inputSemantics
+                     _i s _o r d | composition -> inputSemantics
   where
     indexedCompose ::
       ( HiddenClockReset domain gated synchronous
       , KnownNat reference )
-      => x
+      => composition
       -> iterable
 
       -- | In signal
@@ -49,3 +56,17 @@ class (Iterable iterable _i s _o r d)
       -- | Out signal
       -> ( DSignal domain  reference        (Outgoing inputSemantics s)
          , DSignal domain (reference + r*d)                          s  )
+
+-- | Easy recovery valid signaling from timing.
+isOutputValid :: forall domain gated synchronous
+                        reference 
+                        composition iterable inputSemantics _i s _o r d.
+  ( HiddenClockReset domain gated synchronous
+  , Composition composition iterable inputSemantics _i s _o r d
+  , KnownNat reference
+  , KnownNat (r*d))
+  => composition
+  -> iterable
+  -> DSignal domain  reference        Bool -- ^ On accepted input: valid == ready == true
+  -> DSignal domain (reference + r*d) Bool -- ^ On output
+isOutputValid _ _ = delayN (SNat @(r*d))
