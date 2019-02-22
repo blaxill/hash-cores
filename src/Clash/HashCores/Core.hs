@@ -43,7 +43,7 @@ instance ( Default composition
          => Default (Core composition iterable inputSemantics i o d') where
   def = def :. def
 
--- | Construct a core by its type
+-- | Show instance for Core
 deriving instance
          ( Show composition
          , Show iterable
