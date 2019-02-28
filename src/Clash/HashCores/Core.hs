@@ -1,5 +1,6 @@
 {-# LANGUAGE GADTs                #-}
 {-# LANGUAGE NoImplicitPrelude    #-}
+{-# LANGUAGE NoStarIsType         #-}
 {-# LANGUAGE StandaloneDeriving   #-}
 
 -- To allow unused constraint parameters that are specified
@@ -12,6 +13,8 @@ module Clash.HashCores.Core (
   )
   where
 
+import           Data.Kind                         (Type)
+
 import           Clash.HashCores.Class.Composition
 import           Clash.HashCores.Class.Iterable
 import           Clash.HashCores.Compositions      (Pipelined)
@@ -20,8 +23,8 @@ import           Clash.Prelude
 -- | Wrap a composition and iterable with some input semantics and a known
 -- input to output delay.
 data Core
-  (composition :: *)
-  (iterable :: *)
+  (composition :: Type)
+  (iterable ::Type)
   (inputSemantics :: Input)
   i o
   (d :: Nat)

@@ -22,8 +22,8 @@ import           Clash.HashCores.Hash.SHA256
 import           Clash.Prelude
 
 systemClockSHAPipelined
-  :: Clock System Source
-  -> Reset System Asynchronous
+  :: Clock System 'Source
+  -> Reset System 'Asynchronous
   -> DSignal System 0 (BitVector 512)
   -> DSignal System 192 (BitVector 256)
 systemClockSHAPipelined = exposeClockReset (singleBlockPipe (Pipelined :. SHA256 @1 @1))

@@ -1,4 +1,5 @@
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE NoStarIsType           #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
 
 {-# OPTIONS_GHC -fplugin GHC.TypeLits.Normalise       #-}
@@ -13,9 +14,10 @@ module Clash.HashCores.Class.Paddable (
   )
   where
 
+import qualified Data.ByteString as B
+
 import           Clash.Prelude
 
-import qualified Data.ByteString as B
 
 -- | A paddable/preprocessable 'BitVector'
 --

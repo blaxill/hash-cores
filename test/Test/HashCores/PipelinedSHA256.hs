@@ -1,21 +1,22 @@
 {-# LANGUAGE BinaryLiterals            #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE NoImplicitPrelude         #-}
+{-# LANGUAGE NoStarIsType              #-}
+
+{-# OPTIONS_GHC -fno-warn-missing-monadfail-instances #-}
 
 module Test.HashCores.PipelinedSHA256 where
 
+import           Data.ByteString                       as B
+import qualified Data.ByteString.Char8                 as B8
+import           Data.Kind                             (Type)
+import           Data.Maybe                            (fromMaybe)
+import           Data.Proxy
+import qualified Prelude                               as P
 import           System.Environment                    (setEnv)
 
 import           Clash.Prelude
 import           Clash.Prelude.Testbench
-import qualified Prelude                               as P
-
-import           Test.SmallCheck.Series
-import           Test.Tasty
-import           Test.Tasty.HUnit
-import           Test.Tasty.QuickCheck                 as QC
-import           Test.Tasty.SmallCheck                 as SC
-
 
 import           Clash.HashCores.Class.Iterable
 import           Clash.HashCores.Class.Paddable
@@ -23,10 +24,11 @@ import           Clash.HashCores.Composition.Pipelined
 import           Clash.HashCores.Core
 import           Clash.HashCores.Hash.SHA256           as SHA256
 
-import           Data.ByteString                       as B
-import qualified Data.ByteString.Char8                 as B8
-import           Data.Maybe                            (fromMaybe)
-import           Data.Proxy
+import           Test.SmallCheck.Series                as SC
+import           Test.Tasty
+import           Test.Tasty.HUnit
+import           Test.Tasty.QuickCheck                 as QC
+import           Test.Tasty.SmallCheck                 as SC
 
 import           Test.HashCores.SHA256                 (SingleBlock (..),
                                                         nativeSHA256)
@@ -34,23 +36,27 @@ import           Test.HashCores.SHA256                 (SingleBlock (..),
 -- | Arbitrary small naturals
 instance Arbitrary SomeNat where
   arbitrary = do
-    Just p1 <- someNatVal <$> choose (0,10)
-    return p1
+    nat' <- choose (0,10)
+    case someNatVal nat' of
+      Just nat -> return nat
+      Nothing  -> error "choose (0,10) != nat??"
 
 instance Arbitrary SomeSHA256 where
   arbitrary = do
-    foldDelay <- arbitrary
+    foldDelay  <- arbitrary
     finalDelay <- arbitrary
     return $ someSHA256 foldDelay finalDelay
 
 instance Monad m => Serial m SomeNat where
   series = do
-    Just p1 <- someNatVal <$> series
-    return p1
+    nat' <- SC.generate $ \d -> P.map (fromIntegral) [0..d]
+    case someNatVal nat' of
+      Just nat -> return nat
+      Nothing  -> error "series generated a non-natural number"
 
 instance Monad m => Serial m SomeSHA256 where
   series = do
-    foldDelay <- series
+    foldDelay  <- series
     finalDelay <- series
     return $ someSHA256 foldDelay finalDelay
 

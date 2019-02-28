@@ -1,5 +1,6 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE NoImplicitPrelude      #-}
+{-# LANGUAGE NoStarIsType           #-}
 {-# LANGUAGE RankNTypes             #-}
 
 module Clash.HashCores.Class.Composition (
@@ -7,12 +8,17 @@ module Clash.HashCores.Class.Composition (
   Composition,
   indexedCompose,
 
+  Incoming,
+  Outgoing,
+
   isOutputValid,
 
   IsValid,
   IsReady,
   )
   where
+
+import           Data.Kind                      (Type)
 
 import           Clash.HashCores.Class.Iterable
 import           Clash.Prelude
@@ -26,11 +32,11 @@ data Input
 type IsValid = Bool
 type IsReady = Bool
 
-type family Incoming (inputSemantics :: Input) (a :: *) where
+type family Incoming (inputSemantics :: Input) (a :: Type) where
   Incoming 'Always a = a
   Incoming 'ValidReadyFlagged a = (a, IsValid)
 
-type family Outgoing (inputSemantics :: Input) (a :: *) where
+type family Outgoing (inputSemantics :: Input) (a :: Type) where
   Outgoing 'Always a = ()
   Outgoing 'ValidReadyFlagged a = IsReady
 
@@ -55,11 +61,11 @@ class (Iterable iterable _i s _o r d)
 
       -- | Out signal
       -> ( DSignal domain  reference        (Outgoing inputSemantics s)
-         , DSignal domain (reference + r*d)                          s  )
+         , DSignal domain (reference + r*d)                          s )
 
 -- | Easy recovery valid signaling from timing.
 isOutputValid :: forall domain gated synchronous
-                        reference 
+                        reference
                         composition iterable inputSemantics _i s _o r d.
   ( HiddenClockReset domain gated synchronous
   , Composition composition iterable inputSemantics _i s _o r d

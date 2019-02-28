@@ -8,6 +8,7 @@
 {-# LANGUAGE MagicHash                 #-}
 {-# LANGUAGE MultiParamTypeClasses     #-}
 {-# LANGUAGE NoImplicitPrelude         #-}
+{-# LANGUAGE NoStarIsType              #-}
 {-# LANGUAGE PartialTypeSignatures     #-}
 {-# LANGUAGE TemplateHaskell           #-}
 {-# LANGUAGE TupleSections             #-}
@@ -26,12 +27,14 @@ module Clash.HashCores.Hash.SHA256
   )
 where
 
+import           Data.Kind                      (Type)
+import           Data.Proxy                     (Proxy)
+import qualified Prelude                        as P
+
 import           Clash.Prelude                  hiding (bundle, unbundle)
 import           Clash.Signal.Delayed.Bundle
 import           Clash.Sized.BitVector          ((++#))
 
-import           Data.Proxy                     (Proxy)
-import qualified Prelude                        as P
 
 import           Clash.HashCores.Class.Iterable
 import           Clash.HashCores.Class.Paddable
@@ -73,7 +76,7 @@ kRom = asyncRom $(listToVecTH [
 -- | SHA-256 datatype
 data SHA256 :: Nat
           -> Nat
-          -> * where
+          -> Type where
   SHA256 :: ( KnownNat adderDelay
             , KnownNat finalDelay)
          => SHA256 adderDelay finalDelay

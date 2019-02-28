@@ -6,6 +6,7 @@
 {-# LANGUAGE InstanceSigs          #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NoImplicitPrelude     #-}
+{-# LANGUAGE NoStarIsType          #-}
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE TupleSections         #-}
 {-# LANGUAGE UndecidableInstances  #-}
@@ -18,10 +19,11 @@ module Clash.HashCores.Composition.Pipelined (
   )
   where
 
-import           Clash.Prelude
-
+import           Data.Kind                         (Type)
 import           Data.Proxy
 import           Data.Singletons.Prelude           (type (@@), Apply, TyFun)
+
+import           Clash.Prelude
 
 import           Clash.HashCores.Class.Composition
 import           Clash.HashCores.Class.Iterable
@@ -31,7 +33,7 @@ import           Clash.HashCores.Class.Iterable
 --
 data Pipelined = Pipelined deriving Show
 
-data PipelineStep :: Domain -> Nat -> Nat -> * -> TyFun Nat * -> *
+data PipelineStep :: Domain -> Nat -> Nat -> Type -> TyFun Nat Type -> Type
 type instance Apply (PipelineStep domain t0 delay s) i
   = DSignal domain t0 s
   -> DSignal domain (t0+(delay*(1+i))) s
@@ -48,7 +50,7 @@ instance (Iterable iterable _i s _o r d) => Composition Pipelined iterable 'Alwa
       -> DSignal domain reference s
       -- | Out signal
       -> ( DSignal domain  reference        ()
-         , DSignal domain (reference + r*d) s  )
+         , DSignal domain (reference + r*d)  s )
 
   indexedCompose Pipelined iterable input = (pure (),) $
         dfold (Proxy @(PipelineStep domain reference _ s))
