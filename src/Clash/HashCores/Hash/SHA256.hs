@@ -107,10 +107,13 @@ instance ( KnownNat adderDelay
   preIteration  _ = (, initial) . unpack
   postIteration _ = pack . zipWith (+) initial . snd
 
-  oneStep _sha i s = delayN (SNat @finalDelay) $ bundle (schedule', state')
+  {-# NOINLINE oneStep #-}
+  oneStep _sha i s = delayN (SNat @finalDelay) undef $ bundle (schedule', state')
     where
       (schedule, state) = unbundle s
       k = kRom <$> i
+
+      undef = errorX "internal SHA256 value undefined due to reset"
 
       -- * Combinatorial and logically independent steps
 
@@ -139,19 +142,19 @@ instance ( KnownNat adderDelay
               => SNat n -> DSignal _ _ Word32
       stateIx ix = fmap (at ix) state
 
-      temp1 = delayedFold (SNat @adderDelay) (+)
+      temp1 = delayedFold (SNat @adderDelay) undef (+)
               (stateIx d7 :> s1' :> ch' :> k + fmap head schedule :> Nil)
 
-      temp2 = delayI (s0' + maj')
+      temp2 = delayI undef (s0' + maj')
 
-      state' = let (a:>b:>c:>_d:>e:>f:>g:>_:>Nil) = unbundle (delayI state)
+      state' = let (a:>b:>c:>_d:>e:>f:>g:>_:>Nil) = unbundle (delayI undef state)
                    a' = temp1+temp2
-                   e' = delayI (stateIx d3) + temp1
+                   e' = delayI undef (stateIx d3) + temp1
                 in bundle (a':>a:>b:>c:>e':>e:>f:>g:>Nil)
 
       schedule' = (<<+)
-                 <$> delayI schedule
-                 <*> delayedFold (SNat @adderDelay) (+) (unbundle $ scheduling <$> schedule)
+                 <$> delayI undef schedule
+                 <*> delayedFold (SNat @adderDelay) undef (+) (unbundle $ scheduling <$> schedule)
 
 instance Paddable (SHA256 x y) 447 512 where
     padI :: forall n. (KnownNat n, n <= 447)

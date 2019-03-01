@@ -75,4 +75,4 @@ isOutputValid :: forall domain gated synchronous
   -> iterable
   -> DSignal domain  reference        Bool -- ^ On accepted input: valid == ready == true
   -> DSignal domain (reference + r*d) Bool -- ^ On output
-isOutputValid _ _ = delayN (SNat @(r*d))
+isOutputValid _ _ = delayN (SNat @(r*d)) (errorX "isOutputValid value undefined due to reset")
