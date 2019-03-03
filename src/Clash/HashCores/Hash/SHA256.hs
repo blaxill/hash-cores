@@ -35,7 +35,6 @@ import           Clash.Prelude                  hiding (bundle, unbundle)
 import           Clash.Signal.Delayed.Bundle
 import           Clash.Sized.BitVector          ((++#))
 
-
 import           Clash.HashCores.Class.Iterable
 import           Clash.HashCores.Class.Paddable
 
