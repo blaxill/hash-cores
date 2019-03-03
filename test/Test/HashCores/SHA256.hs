@@ -54,7 +54,7 @@ fromBytes = B.foldl' f 0
 
 hashCoreSHA256 :: SingleBlock -> BitVector 256
 hashCoreSHA256 (SingleBlock block) = iterableTester sha
-    $ padBytes sha d s
+    $ oneBlockPadBytes sha d s
   where
     sha = SHA256 @0 @1
     s = toInteger $ B.length block

@@ -107,7 +107,6 @@ instance ( KnownNat adderDelay
   preIteration  _ = (, initial) . unpack
   postIteration _ = pack . zipWith (+) initial . snd
 
-  {-# NOINLINE oneStep #-}
   oneStep _sha i s = delayN (SNat @finalDelay) undef $ bundle (schedule', state')
     where
       (schedule, state) = unbundle s
@@ -155,19 +154,24 @@ instance ( KnownNat adderDelay
       schedule' = (<<+)
                  <$> delayI undef schedule
                  <*> delayedFold (SNat @adderDelay) undef (+) (unbundle $ scheduling <$> schedule)
+  {-# NOINLINE oneStep #-}
+  -- NOILINE speeds up HDL generation as oneStep will be in a dedicated module.
+  -- TODO: Potentially misses optimizations?
 
 instance Paddable (SHA256 x y) 447 512 where
-    padI :: forall n. (KnownNat n, n <= 447)
-         => (SHA256 x y) -> BitVector n -> BitVector 512
-    padI _ msg =
+    oneBlockPadI
+      :: forall n. (KnownNat n, n <= 447)
+      => (SHA256 x y) -> BitVector n -> BitVector 512
+    oneBlockPadI _ msg =
       let extended = msg ++# (1 :: BitVector 1)
                          ++# (0 :: BitVector (447 - n)) :: BitVector 448
       in pack $ map v2bv (unconcat d32 $ bv2v extended)
                 ++ (0 :> fromInteger (natVal msg) :> Nil)
 
-    padBytes :: forall n. (KnownNat n , n <= 447)
-             => (SHA256 x y) -> BitVector n -> Integer -> BitVector 512
-    padBytes _ m bytes =
+    oneBlockPadBytes
+      :: forall n. (KnownNat n , n <= 447)
+      => (SHA256 x y) -> BitVector n -> Integer -> BitVector 512
+    oneBlockPadBytes _ m bytes =
       let extended = m ++# (0 :: BitVector (448 - n)) :: BitVector 448
           bytes8 = bytes * 8
           shifted = rotateLeft (unconcatBitVector# extended) (55 - bytes)

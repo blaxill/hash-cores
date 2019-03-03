@@ -3,6 +3,8 @@
 {-# LANGUAGE NoStarIsType           #-}
 {-# LANGUAGE RankNTypes             #-}
 
+{-# LANGUAGE AllowAmbiguousTypes    #-}
+
 module Clash.HashCores.Class.Composition (
   Input(..),
   Composition,
@@ -42,37 +44,38 @@ type family Outgoing (inputSemantics :: Input) (a :: Type) where
 
 -- | Compose an 'iterable' function with some 'composition'. This is analogous to
 -- "fold iterable [0..r]", but also determines the circuit layout. Output
--- validity should be solely determined when input is accepted and the timing
--- @r@*@d@.
-class (Iterable iterable _i s _o r d)
+-- validity should be solely determined by accepted input timing @d@.
+class (KnownNat delay, 1 <= delay)
       => Composition composition
-                     iterable
                      (inputSemantics :: Input)
-                     _i s _o r d | composition -> inputSemantics
+                     x
+                     delay | composition -> inputSemantics
   where
     indexedCompose ::
       ( HiddenClockReset domain gated synchronous
-      , KnownNat reference )
+      , Iterable iterable _i x _o r d
+      , KnownNat reference
+      , delay ~ (r*d)
+      )
       => composition
       -> iterable
 
       -- | In signal
-      -> DSignal domain reference (Incoming inputSemantics s)
+      -> DSignal domain reference (Incoming inputSemantics x)
 
       -- | Out signal
-      -> ( DSignal domain  reference        (Outgoing inputSemantics s)
-         , DSignal domain (reference + r*d)                          s )
+      -> ( DSignal domain  reference          (Outgoing inputSemantics x)
+         , DSignal domain (reference + delay)  x                         )
 
 -- | Easy recovery valid signaling from timing.
 isOutputValid :: forall domain gated synchronous
                         reference
-                        composition iterable inputSemantics _i s _o r d.
+                        composition inputSemantics x d.
   ( HiddenClockReset domain gated synchronous
-  , Composition composition iterable inputSemantics _i s _o r d
+  , Composition composition inputSemantics x d
   , KnownNat reference
-  , KnownNat (r*d))
+  , KnownNat d)
   => composition
-  -> iterable
-  -> DSignal domain  reference        Bool -- ^ On accepted input: valid == ready == true
-  -> DSignal domain (reference + r*d) Bool -- ^ On output
-isOutputValid _ _ = delayN (SNat @(r*d)) (errorX "isOutputValid value undefined due to reset")
+  -> DSignal domain  reference      Bool -- ^ On accepted input: valid == ready == true
+  -> DSignal domain (reference + d) Bool -- ^ On output
+isOutputValid _ = delayN (SNat @d) (errorX "isOutputValid value undefined due to reset")

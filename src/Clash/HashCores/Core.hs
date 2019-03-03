@@ -26,13 +26,15 @@ data Core
   (composition :: Type)
   (iterable ::Type)
   (inputSemantics :: Input)
-  i o
-  (d :: Nat)
+  input
+  output
+  (delay :: Nat)
   where
     -- | Interal state parameter @s@ is hidden, and rounds @r@ delay @d@ are
     -- combined for their total delay.
     (:.) :: forall composition iterable inputSemantics i s o r d.
-         ( Composition composition iterable inputSemantics i s o r d)
+         ( Composition composition inputSemantics s (r*d)
+         , Iterable iterable i s o r d)
          => composition
          -> iterable
          -> Core composition iterable inputSemantics i o (r*d)
@@ -40,20 +42,22 @@ data Core
 -- | Construct a core by its type
 instance ( Default composition
          , Default iterable
-         , Composition composition iterable inputSemantics i s o r d
-         , d' ~ (r*d)
+         , Composition composition inputSemantics s rd
+         , Iterable iterable i s o r d
+         , rd ~ (r*d)
          )
-         => Default (Core composition iterable inputSemantics i o d') where
+         => Default (Core composition iterable inputSemantics i o rd) where
   def = def :. def
 
 -- | Show instance for Core
 deriving instance
          ( Show composition
          , Show iterable
-         , Composition composition iterable inputSemantics i s o r d
-         , d' ~ (r*d)
+         , Composition composition inputSemantics s rd
+         , Iterable iterable i s o r d
+         , rd ~ (r*d)
          )
-         => Show (Core composition iterable inputSemantics i o d')
+         => Show (Core composition iterable inputSemantics i o rd)
 
 -- |
 singleBlockPipe ::

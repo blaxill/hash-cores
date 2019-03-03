@@ -41,25 +41,30 @@ type instance Apply (PipelineStep domain t0 delay s) i
 instance Default Pipelined where
   def = Pipelined
 
-instance (Iterable iterable _i s _o r d) => Composition Pipelined iterable 'Always _i s _o r d where
-  indexedCompose :: forall domain gated synchronous reference .
-      ( HiddenClockReset domain gated synchronous)
+instance (KnownNat d, 1 <= d) => Composition Pipelined 'Always x d where
+  indexedCompose :: forall domain gated synchronous
+                           reference 
+                           iterable _i _o r d' .
+      ( HiddenClockReset domain gated synchronous
+      , Iterable iterable _i x _o r d'
+      , d ~ (r*d')
+      )
       => Pipelined
       -> iterable
       -- | In signal
-      -> DSignal domain reference s
+      -> DSignal domain reference x
       -- | Out signal
-      -> ( DSignal domain  reference        ()
-         , DSignal domain (reference + r*d)  s )
+      -> ( DSignal domain  reference      ()
+         , DSignal domain (reference + d) x )
 
   indexedCompose Pipelined iterable input = (pure (),) $
-        dfold (Proxy @(PipelineStep domain reference _ s))
+        dfold (Proxy @(PipelineStep domain reference _ x))
           pipe
           (oneStep iterable 0)
           (reverse . drop d1 . indices $ SNat @(1+(r-1)))
       $ input
     where
       pipe :: SNat l -> Index r
-        -> PipelineStep domain reference d s @@ l
-        -> PipelineStep domain reference d s @@ (l+1)
+        -> PipelineStep domain reference d' x @@ l
+        -> PipelineStep domain reference d' x @@ (l+1)
       pipe _ i f' = oneStep iterable (pure i) . f'

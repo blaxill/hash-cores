@@ -8,8 +8,8 @@
 
 module Clash.HashCores.Class.Paddable (
   Paddable,
-  padI,
-  padBytes,
+  oneBlockPadI,
+  oneBlockPadBytes,
   pad,
   )
   where
@@ -19,23 +19,26 @@ import qualified Data.ByteString as B
 import           Clash.Prelude
 
 
--- | A paddable/preprocessable 'BitVector'
+-- | Padding for a single input block. Multiple block padding not handled right
+-- now.
 --
 -- Given some 'BitVector' of length @n@, padI will give you a 'BitVector' of
 -- length @osize@. 'padI' and 'padBytes' are both intended to be synthesizable.
 class Paddable x (isize :: Nat) (osize :: Nat)
   | x -> isize, x -> osize where
-    -- | Pad with length taken from @n@. (Implies length is static)
-    padI :: ( KnownNat n
-            , n <= isize )
-         => x -> BitVector n -> BitVector osize
+    -- | Pad a single 'BitVector' length taken from @n@. (Implies length is static)
+    oneBlockPadI
+      :: ( KnownNat n
+         , n <= isize )
+      => x -> BitVector n -> BitVector osize
 
     -- | Pad with length taken from integer parameter. (Implies length is
     -- dynamic)
-    padBytes :: ( KnownNat n
-                , n <= isize
-                , (Mod n 8) ~ 0 )
-             => x -> BitVector n -> Integer -> BitVector osize
+    oneBlockPadBytes
+      :: ( KnownNat n
+         , n <= isize
+         , (Mod n 8) ~ 0 )
+      => x -> BitVector n -> Integer -> BitVector osize
 
 -- * Non-synthesizable convenience functions
 
@@ -52,7 +55,7 @@ pad :: forall x i o .
     , (Mod ((Div i 8) * 8) 8) ~ 0 --
     )
     => x -> B.ByteString -> BitVector o
-pad x block = padBytes x d s
+pad x block = oneBlockPadBytes x d s
   where
     s = toInteger $ B.length block
     d = fromInteger (fromBytes block) :: BitVector ((Div i 8) * 8)

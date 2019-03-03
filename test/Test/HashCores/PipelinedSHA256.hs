@@ -5,6 +5,9 @@
 
 {-# OPTIONS_GHC -fno-warn-missing-monadfail-instances #-}
 
+{-# OPTIONS_GHC -fplugin GHC.TypeLits.Normalise       #-}
+{-# OPTIONS_GHC -fplugin GHC.TypeLits.KnownNat.Solver #-}
+
 module Test.HashCores.PipelinedSHA256 where
 
 import           Data.ByteString                       as B
@@ -100,7 +103,9 @@ pipelinedSample' sha =
 -- | TODO/XXX: refactor / clean up
 pipelinedSample :: forall p1 p2 .
                 ( KnownNat p1, KnownNat p2
-                , 1 <= ((2 * p1) + p2))
+                , 1 <= ((2 * p1) + p2)
+                , 1 <= (64*((2 * p1) + p2))
+                )
                 => SHA256 p1 p2 -> SingleBlock -> BitVector 256
 pipelinedSample sha input = sampled
   where
