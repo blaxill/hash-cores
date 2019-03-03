@@ -17,6 +17,7 @@ library
                      , Clash.HashCores.Composition.InPlace
                      , Clash.HashCores.Composition.Pipelined
                      , Clash.HashCores.Compositions
+                     , Clash.HashCores.Hash.SHA1
                      , Clash.HashCores.Hash.SHA256
                      , Clash.HashCores.Hashes
                      , Clash.HashCores.Generator.Counter
