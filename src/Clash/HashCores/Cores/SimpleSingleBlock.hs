@@ -7,8 +7,8 @@
 -- by a functional dependency
 {-# LANGUAGE UndecidableInstances #-}
 
-module Clash.HashCores.Core (
-  Core(..),
+module Clash.HashCores.Cores.SimpleSingleBlock (
+  SimpleCore(..),
   singleBlockPipe,
   )
   where
@@ -22,7 +22,7 @@ import           Clash.Prelude
 
 -- | Wrap a composition and iterable with some input semantics and a known
 -- input to output delay.
-data Core
+data SimpleCore
   (composition :: Type)
   (iterable ::Type)
   (inputSemantics :: Input)
@@ -37,7 +37,7 @@ data Core
          , Iterable iterable i s o r d)
          => composition
          -> iterable
-         -> Core composition iterable inputSemantics i o (r*d)
+         -> SimpleCore composition iterable inputSemantics i o (r*d)
 
 -- | Construct a core by its type
 instance ( Default composition
@@ -46,10 +46,10 @@ instance ( Default composition
          , Iterable iterable i s o r d
          , rd ~ (r*d)
          )
-         => Default (Core composition iterable inputSemantics i o rd) where
+         => Default (SimpleCore composition iterable inputSemantics i o rd) where
   def = def :. def
 
--- | Show instance for Core
+-- | Show instance for SimpleCore
 deriving instance
          ( Show composition
          , Show iterable
@@ -57,7 +57,7 @@ deriving instance
          , Iterable iterable i s o r d
          , rd ~ (r*d)
          )
-         => Show (Core composition iterable inputSemantics i o rd)
+         => Show (SimpleCore composition iterable inputSemantics i o rd)
 
 -- |
 singleBlockPipe ::
@@ -65,7 +65,7 @@ singleBlockPipe ::
      , Iterable iterable i s o r d
      , KnownNat reference
      )
-     => Core Pipelined iterable 'Always i o (r*d)
+     => SimpleCore Pipelined iterable 'Always i o (r*d)
      -> DSignal domain reference i
      -> DSignal domain (reference+r*d) o
 singleBlockPipe (c :. f) =

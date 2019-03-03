@@ -24,7 +24,7 @@ import           Clash.Prelude.Testbench
 import           Clash.HashCores.Class.Iterable
 import           Clash.HashCores.Class.Paddable
 import           Clash.HashCores.Composition.Pipelined
-import           Clash.HashCores.Core
+import           Clash.HashCores.Cores
 import           Clash.HashCores.Hash.SHA256           as SHA256
 
 import           Test.SmallCheck.Series                as SC
