@@ -15,6 +15,7 @@ library
                      , Clash.HashCores.Class.Iterable
                      , Clash.HashCores.Class.Composition
                      , Clash.HashCores.Class.Paddable
+                     , Clash.HashCores.Class.Circuit
                      , Clash.HashCores.Composition.InPlace
                      , Clash.HashCores.Composition.Pipelined
                      , Clash.HashCores.Compositions
@@ -90,9 +91,10 @@ executable hash-cores-test
                      , deepseq
                      , cryptohash
                      , bytestring
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  ghc-options:         -threaded -with-rtsopts=-N
                        -fplugin=GHC.TypeLits.Normalise
                        -fplugin=GHC.TypeLits.KnownNat.Solver
   default-language:    Haskell2010
   other-modules:       Test.HashCores.SHA256
                      , Test.HashCores.PipelinedSHA256
+                     , Test.HashCores.InPlaceSHA256

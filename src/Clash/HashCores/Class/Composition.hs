@@ -14,9 +14,6 @@ module Clash.HashCores.Class.Composition (
   Outgoing,
 
   isOutputValid,
-
-  IsValid,
-  IsReady,
   )
   where
 
@@ -31,16 +28,13 @@ data Input
   = Always            -- ^ Input is always valid
   | ValidReadyFlagged -- ^ Input follows dataflow semantics
 
-type IsValid = Bool
-type IsReady = Bool
+type family Incoming (inputSemantics :: Input) :: Type where
+  Incoming 'Always = ()
+  Incoming 'ValidReadyFlagged = Bool -- Is valid
 
-type family Incoming (inputSemantics :: Input) (a :: Type) where
-  Incoming 'Always a = a
-  Incoming 'ValidReadyFlagged a = (a, IsValid)
-
-type family Outgoing (inputSemantics :: Input) (a :: Type) where
-  Outgoing 'Always a = ()
-  Outgoing 'ValidReadyFlagged a = IsReady
+type family Outgoing (inputSemantics :: Input) :: Type where
+  Outgoing 'Always = ()
+  Outgoing 'ValidReadyFlagged = Bool -- Is ready
 
 -- | Compose an 'iterable' function with some 'composition'. This is analogous to
 -- "fold iterable [0..r]", but also determines the circuit layout. Output
@@ -61,11 +55,11 @@ class (KnownNat delay, 1 <= delay)
       -> iterable
 
       -- | In signal
-      -> DSignal domain reference (Incoming inputSemantics x)
+      -> DSignal domain reference (x, Incoming inputSemantics)
 
       -- | Out signal
-      -> ( DSignal domain  reference          (Outgoing inputSemantics x)
-         , DSignal domain (reference + delay)  x                         )
+      -> ( DSignal domain (reference + delay)  x
+         , DSignal domain  reference          (Outgoing inputSemantics))
 
 -- | Easy recovery valid signaling from timing.
 isOutputValid :: forall domain gated synchronous
