@@ -141,7 +141,7 @@ instance ( KnownNat adderDelay
       stateIx ix = fmap (at ix) state
 
       temp1 = delayedFold (SNat @adderDelay) undef (+)
-              (stateIx d7 :> s1' :> ch' :> k + fmap head schedule :> Nil)
+              (stateIx d7 + fmap head schedule :> s1' :> ch' :> k :> Nil)
 
       temp2 = delayI undef (s0' + maj')
 
@@ -153,7 +153,7 @@ instance ( KnownNat adderDelay
       schedule' = (<<+)
                  <$> delayI undef schedule
                  <*> delayedFold (SNat @adderDelay) undef (+) (unbundle $ scheduling <$> schedule)
-  {-# NOINLINE oneStep #-}
+  -- {-# NOINLINE oneStep #-}
   -- NOILINE speeds up HDL generation as oneStep will be in a dedicated module.
   -- TODO: Potentially misses optimizations?
 

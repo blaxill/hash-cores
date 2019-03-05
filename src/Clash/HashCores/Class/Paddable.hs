@@ -18,7 +18,6 @@ import qualified Data.ByteString as B
 
 import           Clash.Prelude
 
-
 -- | Padding for a single input block. Multiple block padding not handled right
 -- now.
 --

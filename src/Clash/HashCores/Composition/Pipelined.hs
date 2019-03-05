@@ -10,6 +10,7 @@
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE TupleSections         #-}
 {-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE ViewPatterns          #-}
 
 {-# OPTIONS_GHC -fplugin GHC.TypeLits.Normalise       #-}
 {-# OPTIONS_GHC -fplugin GHC.TypeLits.KnownNat.Solver #-}
@@ -43,7 +44,7 @@ instance Default Pipelined where
 
 instance (KnownNat d, 1 <= d) => Composition Pipelined 'Always x d where
   indexedCompose :: forall domain gated synchronous
-                           reference 
+                           reference
                            iterable _i _o r d' .
       ( HiddenClockReset domain gated synchronous
       , Iterable iterable _i x _o r d'
@@ -52,12 +53,12 @@ instance (KnownNat d, 1 <= d) => Composition Pipelined 'Always x d where
       => Pipelined
       -> iterable
       -- | In signal
-      -> DSignal domain reference x
+      -> DSignal domain reference (x, ())
       -- | Out signal
-      -> ( DSignal domain  reference      ()
-         , DSignal domain (reference + d) x )
+      -> ( DSignal domain (reference + d) x
+         , DSignal domain  reference      ())
 
-  indexedCompose Pipelined iterable input = (pure (),) $
+  indexedCompose Pipelined iterable (fmap fst->input) = (,pure ()) $
         dfold (Proxy @(PipelineStep domain reference _ x))
           pipe
           (oneStep iterable 0)
@@ -68,3 +69,4 @@ instance (KnownNat d, 1 <= d) => Composition Pipelined 'Always x d where
         -> PipelineStep domain reference d' x @@ l
         -> PipelineStep domain reference d' x @@ (l+1)
       pipe _ i f' = oneStep iterable (pure i) . f'
+  -- {-# NOINLINE indexedCompose #-}

@@ -1,14 +1,15 @@
--- | SHA-1 https://en.wikipedia.org/wiki/SHA-2
+-- | XXX: UNTESTED!
+-- | SHA-1
 
 {-# LANGUAGE BinaryLiterals            #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleInstances         #-}
 {-# LANGUAGE GADTs                     #-}
 {-# LANGUAGE InstanceSigs              #-}
+{-# LANGUAGE LambdaCase                #-}
 {-# LANGUAGE MagicHash                 #-}
 {-# LANGUAGE MultiParamTypeClasses     #-}
 {-# LANGUAGE NoImplicitPrelude         #-}
-{-# LANGUAGE LambdaCase         #-}
 {-# LANGUAGE NoStarIsType              #-}
 {-# LANGUAGE PartialTypeSignatures     #-}
 {-# LANGUAGE TemplateHaskell           #-}
@@ -85,7 +86,7 @@ instance ( KnownNat adderDelay
 
   oneStep _sha i s = delayN (SNat @finalDelay) undef $ bundle (schedule', state')
     where
-      (schedule, state) = unbundle s :: 
+      (schedule, state) = unbundle s ::
             (DSignal _ _ (Vec 16 Word32), DSignal _ _ (Vec 5 Word32))
 
       undef = errorX "internal SHA1 value undefined due to reset"
@@ -98,7 +99,7 @@ instance ( KnownNat adderDelay
             ( b `xor` c `xor` d
             , 0x6ED9EBA1 )
         x | 40 <= x && x < 60 ->
-            ( (b .&. c) .|. (b .&. d) .|. (c .&. d) 
+            ( (b .&. c) .|. (b .&. d) .|. (c .&. d)
             , 0x8F1BBCDC )
         x | 60 <= x ->
             ( b `xor` c `xor` d

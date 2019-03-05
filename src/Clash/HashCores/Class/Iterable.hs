@@ -9,12 +9,11 @@ module Clash.HashCores.Class.Iterable (
   )
   where
 
-import           Clash.Prelude
+import           Control.DeepSeq             (NFData)
+import qualified Prelude                     as P
 
--- For iterableTester
-import qualified Prelude as P
+import           Clash.Prelude
 import qualified Clash.Signal.Delayed.Bundle as B
-import Control.DeepSeq (NFData)
 
 class ( KnownNat rounds
       , KnownNat delay
