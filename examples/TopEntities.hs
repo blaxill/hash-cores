@@ -27,10 +27,10 @@ systemClockSHAInPlace
   :: Clock System 'Source
   -> Reset System 'Asynchronous
   -> DSignal System 0 (BitVector 512, Bool)
-  -> ( DSignal System 192 (BitVector 256)
+  -> ( DSignal System 64 (BitVector 256)
      , DSignal System 0 Bool)
 systemClockSHAInPlace =
-  exposeClockReset $ mkCircuit $ SimpleCore InPlace (SHA256 @1 @1)
+  exposeClockReset $ mkCircuit $ SimpleCore InPlace (SHA256 @0 @1)
 
 {-# ANN systemClockSHAInPlace
   (Synthesize
@@ -48,12 +48,16 @@ systemClockSHAInPlace =
                    ]
     }) #-}
 {-# NOINLINE systemClockSHAInPlace #-}
+-- placed artix7 stats with only 100 in, 100 out pins routed @ 100mhz
+-- (i.e. take these with a grain of salt)
 -- SHA256 @0 @1
 -- LUTs  regs  slices
 -- 671   621   232
 --
 -- SHA256 @1 @1
 -- LUTs  regs  slices
+-- 809   1791  340
+-- 0.162 W (low confidence)
 
 systemClockSHAPipelined
   :: Clock System 'Source
@@ -73,7 +77,9 @@ systemClockSHAPipelined =
     , t_output = PortName "hash"
     }) #-}
 {-# NOINLINE systemClockSHAPipelined #-}
-
+-- Make sure the hierarchy is fully flattened either by Clash or Vivado
+-- placed artix7 stats with only 100 in, 100 out pins routed @ 100mhz
+-- (i.e. take these with a grain of salt)
 -- SHA256 @1 @1
 -- LUTs  regs  slices
 -- 23994 55565 9143
