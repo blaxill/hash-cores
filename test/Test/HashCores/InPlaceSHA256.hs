@@ -8,15 +8,15 @@
 {-# OPTIONS_GHC -fplugin GHC.TypeLits.Normalise       #-}
 {-# OPTIONS_GHC -fplugin GHC.TypeLits.KnownNat.Solver #-}
 
-module Test.HashCores.PipelinedSHA256 where
+module Test.HashCores.InPlaceSHA256 where
 
-import           Data.ByteString                       as B
-import qualified Data.ByteString.Char8                 as B8
-import           Data.Kind                             (Type)
-import           Data.Maybe                            (fromMaybe)
+import           Data.ByteString                     as B
+import qualified Data.ByteString.Char8               as B8
+import           Data.Kind                           (Type)
+import           Data.Maybe                          (fromMaybe)
 import           Data.Proxy
-import qualified Prelude                               as P
-import           System.Environment                    (setEnv)
+import qualified Prelude                             as P
+import           System.Environment                  (setEnv)
 
 import           Clash.Prelude
 import           Clash.Prelude.Testbench
@@ -24,18 +24,18 @@ import           Clash.Prelude.Testbench
 import           Clash.HashCores.Class.Circuit
 import           Clash.HashCores.Class.Iterable
 import           Clash.HashCores.Class.Paddable
-import           Clash.HashCores.Composition.Pipelined
+import           Clash.HashCores.Composition.InPlace
 import           Clash.HashCores.Cores
-import           Clash.HashCores.Hash.SHA256           as SHA256
+import           Clash.HashCores.Hash.SHA256         as SHA256
 
-import           Test.SmallCheck.Series                as SC
+import           Test.SmallCheck.Series              as SC
 import           Test.Tasty
 import           Test.Tasty.HUnit
-import           Test.Tasty.QuickCheck                 as QC
-import           Test.Tasty.SmallCheck                 as SC
+import           Test.Tasty.QuickCheck               as QC
+import           Test.Tasty.SmallCheck               as SC
 
-import           Test.HashCores.SHA256                 (SingleBlock (..),
-                                                        nativeSHA256)
+import           Test.HashCores.SHA256               (SingleBlock (..),
+                                                      nativeSHA256)
 
 -- | Arbitrary small naturals
 instance Arbitrary SomeNat where
@@ -88,45 +88,44 @@ runSomeSHA
 runSomeSHA(SomeSHA256 sha256) go = go sha256
 
 -- | TODO/XXX: refactor / clean up
-pipelinedSample' :: forall p1 p2 .
+inplaceSample' :: forall p1 p2 .
                  ( KnownNat p1, KnownNat p2)
                  => SHA256 p1 p2 -> SingleBlock -> Maybe (BitVector 256)
-pipelinedSample' sha =
+inplaceSample' sha =
     case u1 of
       UZero -> case u2 of
         UZero   -> const Nothing
-        USucc _ -> Just . pipelinedSample sha
-      USucc _ -> Just . pipelinedSample sha
+        USucc _ -> Just . inplaceSample sha
+      USucc _ -> Just . inplaceSample sha
   where
     u1 = toUNat (SNat @p1)
     u2 = toUNat (SNat @p2)
 
 -- | TODO/XXX: refactor / clean up
-pipelinedSample :: forall p1 p2 .
+inplaceSample :: forall p1 p2 .
                 ( KnownNat p1, KnownNat p2
                 , 1 <= ((2 * p1) + p2)
                 , 1 <= (64*((2 * p1) + p2))
                 )
                 => SHA256 p1 p2 -> SingleBlock -> BitVector 256
-pipelinedSample sha input = sampled
+inplaceSample sha input = sampled
   where
     core
       :: ( HiddenClockReset domain gated synchronous )
-      => DSignal domain 0 (BitVector 512)
-      -> DSignal domain (0 + (64 * ((2 * p1) + p2))) (BitVector 256)
-    core x = fst $ mkCircuit (SimpleCore Pipelined sha) (fmap (,()) x)
+      => Signal domain (BitVector 512, Bool)
+      -> Signal domain (BitVector 256)
+    core x = toSignal $ fst $ mkCircuit (SimpleCore InPlace sha) $ fromSignal x
 
     timing = 64*(2*(snatToNum (SNat @p1))+snatToNum (SNat @p2))
 
-    sampled = P.head . P.drop timing . simulate (toSignal.core.fromSignal)
-            $ processed:P.repeat 0
+    sampled = P.head . P.drop timing . simulate core $ ((processed,True):P.repeat (0,False))
 
     processed = pad sha . unsingleBlock $ input
 
 qcProps = testGroup "(checked by QuickCheck)"
   [ QC.testProperty "Hashes random single block" $
       \sha x ->
-        case runSomeSHA sha pipelinedSample' x of
+        case runSomeSHA sha inplaceSample' x of
           Nothing -> discard
           Just v  -> v == nativeSHA256 x
   ]
@@ -134,7 +133,7 @@ qcProps = testGroup "(checked by QuickCheck)"
 scProps = testGroup "(checked by SmallCheck)"
   [ SC.testProperty "Hash 'The quick brown fox jumps over the lazy dog'" $
       \sha -> not (isZero sha) SC.==>
-        runSomeSHA sha pipelinedSample' tqbf == Just (nativeSHA256 tqbf)
+        runSomeSHA sha inplaceSample' tqbf == Just (nativeSHA256 tqbf)
   ]
   where
     tqbf = SingleBlock (B8.pack "The quick brown fox jumps over the lazy dog")
@@ -143,4 +142,4 @@ properties :: TestTree
 properties = testGroup "Properties" [qcProps, scProps]
 
 -- | SHA-256 @0 @0 will be ignored or discarded
-tests = testGroup "Pipelined :. SHA-256 @X @Y" [properties]
+tests = testGroup "InPlace :. SHA-256 @X @Y" [properties]
