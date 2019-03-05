@@ -25,57 +25,55 @@ import           Clash.Prelude
 import           Clash.HashCores.Class.Composition
 import           Clash.HashCores.Class.Iterable
 
-import qualified Clash.Signal.Delayed.Bundle       as B
-
 -- | A core that iterates in place without explicit storage of state (although
 -- implicitly stored in the iterated function), by connecting input to output
 -- and tracking iteration indices.
 data InPlace = InPlace deriving Show
 
-instance (KnownNat d, 1 <= d) => Composition InPlace 'ValidReadyFlagged x d where
+instance (KnownNat rd, 1 <= rd) => Composition InPlace 'ValidReadyFlagged x rd where
   indexedCompose :: forall domain gated synchronous
-                           reference 
-                           iterable _i _o r d' .
+                           reference
+                           iterable _i _o r d .
       ( HiddenClockReset domain gated synchronous
-      , Iterable iterable _i x _o r d'
-      , d ~ (r*d')
+      , Iterable iterable _i x _o r d
+      , rd ~ (r*d)
       )
       => InPlace
       -> iterable
       -- | In signal
-      -> DSignal domain reference (x, IsValid)
+      -> DSignal domain reference (x, Bool)
       -- | Out signal
-      -> ( DSignal domain  reference      (IsReady)
-         , DSignal domain (reference + d)  x       )
-  indexedCompose InPlace iterable (B.unbundle -> (input,valid)) =
-  -- XXX: Our type safety breaks down in here!
-      ( unsafeFromSignal ready
-      , unsafeFromSignal state )
+      -> ( DSignal domain (reference + rd) x
+         , DSignal domain  reference      Bool)
+  -- XXX: Our timing type safety breaks down in here!
+  indexedCompose InPlace iterable (unbundle . toSignal -> (input,valid)) =
+      ( unsafeFromSignal state
+      , unsafeFromSignal ready )
     where
-      accept = toSignal valid .==. (ready .==. pure True)
+      accept = valid .==. (ready .==. pure True)
 
       rounds = snatToNum (SNat @r)
 
-      counter = register 0 counterNext
-      counterNext = satAdd SatWrap 1 <$> counter
+      roundIx' :: Signal domain (Index r)
+      roundIx' = resize . min (rounds-1) <$> roundIx
 
-      ix :: Signal domain (Index (2 + d'))
-      ix = blockRam
-            (replicate (SNat @d') (rounds+1))
-            counterNext
-            (Just <$> write)
-
-      incr True  _ = 0
-      incr False v = v + 1
- 
-      write :: Signal domain (Index d, Index (2 + d'))
-      write = bundle (counter, incr <$> accept <*> ix)
+      inRound = mux accept 0     roundIx'
+      inState = mux accept input state
 
       state :: Signal domain x
-      state = toSignal
-        ( oneStep iterable
-          (unsafeFromSignal $ resize . min (rounds-1) <$> ix)
-          (unsafeFromSignal $ mux accept (toSignal input) state)
-        )
+      state = toSignal . uncurry (oneStep iterable) $ (fromSignal inRound, fromSignal inState)
 
-      ready = (>=) rounds <$> ix
+      ready = (>=) rounds <$> roundIx
+
+      --
+
+      ticker :: Signal domain (Index d)
+      ticker = register 0 (satAdd SatWrap 1 <$> ticker)
+
+      roundIx :: Signal domain (Index (r + 1))
+      roundIx = if natVal (SNat @d) > 1
+                then blockRam
+                  (replicate (SNat @d) rounds)
+                  (satAdd SatWrap 1 <$> ticker) -- (ticker)
+                  ((\x y -> Just (x,y)) <$> ticker <*> ((1+). resize <$> inRound))
+                else register rounds ((1+). resize <$> inRound)
