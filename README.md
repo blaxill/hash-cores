@@ -1,46 +1,33 @@
 # hash-cores
 
-An experimental Clash based hash library testing type level parametric hash core design. Expressive types determine the timing of hash functions:
+An experimental Clash library for building type configured FPGA hash cores with precise types. 
 
 ~~~haskell
-type MySHA = Core Pipelined
-                  (SHA256 1 1)    -- SHA256 with timing parameters
-                  'Always         -- Input validity semantics
-                  (BitVector 512) -- Input shape
-                  (BitVector 256) -- Output shape
-                  192             -- Input to output timing
-					
--- Construct value representation either explicitly 
-λ> Pipelined :. (SHA256 @1 @1)
-(:.) Pipelined SHA-256 d1 d1
+λ> :t SimpleCore Pipelined (SHA256 @1 @1)
+SimpleCore Pipelined (SHA256 @1 @1)
+  :: SimpleCore
+       Pipelined       -- Composition type
+       (SHA256 1 1)    -- SHA256 with register placement parameters
+       'Always         -- Input validity semantics
+       (BitVector 512) -- Input shape
+       (BitVector 256) -- Output shape
+       192             -- Input to output cycling timing
 
--- Or with default instance, via type annotation
-λ> def :: MySHA
-(:.) Pipelined SHA-256 d1 d1
-
+λ> :t mkCircuitDataOnly (SimpleCore Pipelined (SHA256 @1 @1))
+  mkCircuitDataOnly (SimpleCore Pipelined (SHA256 @1 @1))
+    :: (?clk::Clock domain gated,
+        ?rst::Reset domain synchronous,
+        KnownNat reference)
+    => DSignal domain reference (BitVector 512)
+    -> DSignal domain (reference + 192) (BitVector 256)
 ~~~
 
-Note: The choice of `Pipelined` and `SHA256 @1 @1` fully determines the other parameters:
-
-~~~haskell
-λ> type MySHA = Core Pipelined (SHA256 1 1) 'Always (BitVector 512) (BitVector 256) 192
-λ> def :: MySHA
-(:.) Pipelined SHA-256 d1 d1
-
-λ> type FailMySHA = Core Pipelined (SHA256 1 1) 'Always (BitVector 512) (BitVector 256) 333
-λ> def :: FailMySHA
-
-<interactive>:69:1: error:
-    • Couldn't match type ‘192’ with ‘333’ arising from a use of ‘def’
-    • In the expression: def :: FailMySHA
-      In an equation for ‘it’: it = def :: FailMySHA
-~~~
 
 First stops:
 
-- [src/Clash/HashCores/Class/*](https://github.com/blaxill/dsignal-hash-cores/blob/master/src/Clash/HashCores/Class/)
-- [src/Clash/HashCores/Core.hs](https://github.com/blaxill/dsignal-hash-cores/blob/master/src/Clash/HashCores/Core.hs)
-- [src/Clash/HashCores/Hash/Sha.hs](https://github.com/blaxill/dsignal-hash-cores/blob/master/src/Clash/HashCores/Hash/SHA256.hs)
+- [src/Clash/HashCores/Class/](https://github.com/blaxill/dsignal-hash-cores/blob/master/src/Clash/HashCores/Class/)
+- [src/Clash/HashCores/Hash/](https://github.com/blaxill/dsignal-hash-cores/blob/master/src/Clash/HashCores/Hash/)
+- [src/Clash/HashCores/Core/](https://github.com/blaxill/dsignal-hash-cores/blob/master/src/Clash/HashCores/Core/)
 
 
 ### Usage
@@ -49,7 +36,7 @@ Compose a chosen hash function with a chosen composition strategy. Check `exampl
 
 1. Run the Clash compiler with something like the following:
 
-  `cabal new-run clashi -- -i./hash-cores/src/ -fclash-spec-limit=128 -fclash-inline-limit=128 -outputdir output`
+  `cabal new-run clashi -- -i./hash-cores/src/ -fclash-spec-limit=500 -fclash-inline-limit=500 -outputdir output`
 
 2. Then from inside clashi
 
@@ -63,22 +50,33 @@ Compose a chosen hash function with a chosen composition strategy. Check `exampl
 
 ```bash
 > cabal new-run hash-cores-test
+Up to date
+Built with thread support: True
 Hash core tests
   SHA-256 primitive
     Unit tests
-      Hash 'The quick brown fox jumps over the lazy dog':   OK (0.01s)
+      Hash 'The quick brown fox jumps over the lazy dog':   OK
     Properties
       (checked by QuickCheck)
-        Hashes random single block (preprocessBytes):       OK (1.10s)
-          +++ OK, passed 100 tests.
+        Hashes random single block (preprocessBytes):       OK (0.02s)
+          +++ OK, passed 4 tests.
+  InPlace :. SHA-256 @X @Y
+    Properties
+      (checked by QuickCheck)
+        Hashes random single block:                         OK (0.25s)
+          +++ OK, passed 4 tests.
+      (checked by SmallCheck)
+        Hash 'The quick brown fox jumps over the lazy dog': OK (0.33s)
+          16 tests completed (but 1 did not meet the condition)
   Pipelined :. SHA-256 @X @Y
     Properties
       (checked by QuickCheck)
-        Hashes random single block:                         OK (32.79s)
-          +++ OK, passed 100 tests.
+        Hashes random single block:                         OK (5.21s)
+          +++ OK, passed 4 tests.
       (checked by SmallCheck)
-        Hash 'The quick brown fox jumps over the lazy dog': OK (7.79s)
-          36 tests completed (but 1 did not meet the condition)
-All 4 tests passed (32.80s)
+        Hash 'The quick brown fox jumps over the lazy dog': OK (3.13s)
+          16 tests completed (but 1 did not meet the condition)
+
+All 6 tests passed (5.22s)
 ```
 
