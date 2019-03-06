@@ -58,6 +58,9 @@ systemClockSHAInPlace =
 -- LUTs  regs  slices
 -- 809   1791  340
 -- 0.162 W (low confidence)
+--
+-- 200mhz+ SHA256 @1 @1 placed without DSPs being infered - a lot of room for
+-- improvement
 
 systemClockSHAPipelined
   :: Clock System 'Source

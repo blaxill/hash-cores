@@ -1,5 +1,5 @@
 module Clash.HashCores.Cores (
-    module Clash.HashCores.Cores.SimpleSingleBlock
+    module Clash.HashCores.Core.SimpleSingleBlock
     ) where
 
-import           Clash.HashCores.Cores.SimpleSingleBlock
+import           Clash.HashCores.Core.SimpleSingleBlock

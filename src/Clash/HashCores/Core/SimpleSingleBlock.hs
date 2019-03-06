@@ -9,7 +9,7 @@
 -- by a functional dependency
 {-# LANGUAGE UndecidableInstances  #-}
 
-module Clash.HashCores.Cores.SimpleSingleBlock (
+module Clash.HashCores.Core.SimpleSingleBlock (
   SimpleCore(..),
   -- singleBlockPipe,
   )

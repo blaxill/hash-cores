@@ -11,7 +11,7 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Clash.HashCores.Cores
-                     , Clash.HashCores.Cores.SimpleSingleBlock
+                     , Clash.HashCores.Core.SimpleSingleBlock
                      , Clash.HashCores.Class.Iterable
                      , Clash.HashCores.Class.Composition
                      , Clash.HashCores.Class.Paddable
