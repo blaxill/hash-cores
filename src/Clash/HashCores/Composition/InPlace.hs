@@ -31,10 +31,10 @@ import           Clash.HashCores.Class.Iterable
 data InPlace = InPlace deriving Show
 
 instance (KnownNat rd, 1 <= rd) => Composition InPlace 'ValidReadyFlagged x rd where
-  indexedCompose :: forall domain gated synchronous
+  indexedCompose :: forall domain
                            reference
                            iterable _i _o r d .
-      ( HiddenClockReset domain gated synchronous
+      ( HiddenClockResetEnable domain
       , Iterable iterable _i x _o r d
       , rd ~ (r*d)
       )

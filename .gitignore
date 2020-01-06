@@ -2,3 +2,8 @@ MD5*
 Ripe*
 *.nix
 monopic
+.stack-work/
+output/
+**/*.hi
+**/*.o
+stack.yaml.lock

@@ -111,14 +111,14 @@ inplaceSample :: forall p1 p2 .
 inplaceSample sha input = sampled
   where
     core
-      :: ( HiddenClockReset domain gated synchronous )
+      :: ( HiddenClockResetEnable domain )
       => Signal domain (BitVector 512, Bool)
       -> Signal domain (BitVector 256)
     core x = toSignal $ fst $ mkCircuit (SimpleCore InPlace sha) $ fromSignal x
 
     timing = 64*(2*(snatToNum (SNat @p1))+snatToNum (SNat @p2))
 
-    sampled = P.head . P.drop timing . simulate core $ ((processed,True):P.repeat (0,False))
+    sampled = P.head . P.drop timing . simulate @System core $ ((processed,True):P.repeat (0,False))
 
     processed = pad sha . unsingleBlock $ input
 

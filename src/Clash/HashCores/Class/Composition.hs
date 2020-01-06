@@ -46,7 +46,7 @@ class (KnownNat delay, 1 <= delay)
                      delay | composition -> inputSemantics
   where
     indexedCompose ::
-      ( HiddenClockReset domain gated synchronous
+      ( HiddenClockResetEnable domain
       , Iterable iterable _i x _o r d
       , KnownNat reference
       , delay ~ (r*d)
@@ -62,10 +62,10 @@ class (KnownNat delay, 1 <= delay)
          , DSignal domain  reference          (Outgoing inputSemantics))
 
 -- | Easy recovery valid signaling from timing.
-isOutputValid :: forall domain gated synchronous
+isOutputValid :: forall domain
                         reference
                         composition inputSemantics x d.
-  ( HiddenClockReset domain gated synchronous
+  ( HiddenClockResetEnable domain
   , Composition composition inputSemantics x d
   , KnownNat reference
   , KnownNat d)

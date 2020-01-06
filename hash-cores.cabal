@@ -22,7 +22,6 @@ library
                      , Clash.HashCores.Hash.SHA1
                      , Clash.HashCores.Hash.SHA256
                      , Clash.HashCores.Hashes
-                     , Clash.HashCores.Generator.Counter
                      , Clash.HashCores.TH
   default-extensions: DataKinds
                       FlexibleContexts
@@ -41,7 +40,7 @@ library
                      , ghc-typelits-extra
                      , ghc-typelits-natnormalise
                      , ghc-typelits-knownnat
-                     , clash-prelude
+                     , clash-prelude >=1 && <1.1
                      , lens
                      , deepseq
                      , bytestring
@@ -79,7 +78,7 @@ executable hash-cores-test
                      , ghc-typelits-natnormalise
                      , ghc-typelits-knownnat
                      , hash-cores
-                     , clash-prelude
+                     , clash-prelude >=1 && <1.1
                      , hspec
                      , QuickCheck
                      , smallcheck
