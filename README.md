@@ -1,6 +1,6 @@
 # hash-cores
 
-[![Build Status](https://travis-ci.com/kejace/hash-cores.svg?branch=master)](https://travis-ci.com/kejace/hash-cores)
+[![Build Status](https://travis-ci.com/blaxill/hash-cores.svg?branch=master)](https://travis-ci.com/blaxill/hash-cores)
 
 An experimental Clash library for building type configured FPGA hash cores with precise types. 
 
