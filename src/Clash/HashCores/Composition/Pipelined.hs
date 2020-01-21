@@ -43,10 +43,10 @@ instance Default Pipelined where
   def = Pipelined
 
 instance (KnownNat d, 1 <= d) => Composition Pipelined 'Always x d where
-  indexedCompose :: forall domain gated synchronous
+  indexedCompose :: forall domain
                            reference
                            iterable _i _o r d' .
-      ( HiddenClockReset domain gated synchronous
+      ( HiddenClockResetEnable domain
       , Iterable iterable _i x _o r d'
       , d ~ (r*d')
       )

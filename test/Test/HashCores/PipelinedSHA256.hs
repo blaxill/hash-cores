@@ -111,14 +111,14 @@ pipelinedSample :: forall p1 p2 .
 pipelinedSample sha input = sampled
   where
     core
-      :: ( HiddenClockReset domain gated synchronous )
+      :: ( HiddenClockResetEnable domain )
       => DSignal domain 0 (BitVector 512)
       -> DSignal domain (0 + (64 * ((2 * p1) + p2))) (BitVector 256)
     core x = fst $ mkCircuit (SimpleCore Pipelined sha) (fmap (,()) x)
 
     timing = 64*(2*(snatToNum (SNat @p1))+snatToNum (SNat @p2))
 
-    sampled = P.head . P.drop timing . simulate (toSignal.core.fromSignal)
+    sampled = P.head . P.drop timing . simulate @System (toSignal.core.fromSignal)
             $ processed:P.repeat 0
 
     processed = pad sha . unsingleBlock $ input

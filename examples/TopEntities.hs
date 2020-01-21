@@ -24,13 +24,14 @@ import           Clash.HashCores.Hash.SHA256
 
 
 systemClockSHAInPlace
-  :: Clock System 'Source
-  -> Reset System 'Asynchronous
+  :: Clock System
+  -> Reset System
+  -> Enable System
   -> DSignal System 0 (BitVector 512, Bool)
   -> ( DSignal System 64 (BitVector 256)
      , DSignal System 0 Bool)
 systemClockSHAInPlace =
-  exposeClockReset $ mkCircuit $ SimpleCore InPlace (SHA256 @0 @1)
+  exposeClockResetEnable $ mkCircuit $ SimpleCore InPlace (SHA256 @0 @1)
 
 {-# ANN systemClockSHAInPlace
   (Synthesize
@@ -63,12 +64,13 @@ systemClockSHAInPlace =
 -- improvement
 
 systemClockSHAPipelined
-  :: Clock System 'Source
-  -> Reset System 'Asynchronous
+  :: Clock System
+  -> Reset System
+  -> Enable System
   -> DSignal System 0 (BitVector 512)
   -> DSignal System 64 (BitVector 256)
 systemClockSHAPipelined =
-  exposeClockReset $ mkCircuitDataOnly $ SimpleCore Pipelined (SHA256 @0 @1)
+  exposeClockResetEnable $ mkCircuitDataOnly $ SimpleCore Pipelined (SHA256 @0 @1)
 
 {-# ANN systemClockSHAPipelined
   (Synthesize

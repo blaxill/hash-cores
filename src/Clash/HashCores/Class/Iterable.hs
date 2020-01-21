@@ -9,7 +9,6 @@ module Clash.HashCores.Class.Iterable (
   )
   where
 
-import           Control.DeepSeq             (NFData)
 import qualified Prelude                     as P
 
 import           Clash.Prelude
@@ -25,7 +24,7 @@ class ( KnownNat rounds
   preIteration :: x -> i -> s
   postIteration :: x -> s -> o
 
-  oneStep :: ( HiddenClockReset domain gated synchronous )
+  oneStep :: ( HiddenClockResetEnable domain )
           => x
           -> DSignal domain reference (Index rounds)
              -- ^ Current index
@@ -50,7 +49,7 @@ class ( KnownNat rounds
 iterableTester
   :: forall x i s o r d.
   ( Iterable x i s o r d
-  , NFData s
+  , NFDataX s
   , KnownNat (r-1)
   , 1 ~ d)
   => x
@@ -58,7 +57,7 @@ iterableTester
   -> o
 iterableTester x = postIteration x . go 0 . preIteration  x
   where
-    f ix v = P.head . P.drop 1 . simulate (toSignal . uncurry (oneStep x) . B.unbundle . unsafeFromSignal) $ P.repeat (ix,v)
+    f ix v = P.head . P.drop 1 . simulate @System (toSignal . uncurry (oneStep x) . B.unbundle . unsafeFromSignal) $ P.repeat (ix,v)
     rounds = snatToNum (SNat @(r-1)) :: Index (r)
 
     go n

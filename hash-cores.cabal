@@ -22,7 +22,6 @@ library
                      , Clash.HashCores.Hash.SHA1
                      , Clash.HashCores.Hash.SHA256
                      , Clash.HashCores.Hashes
-                     , Clash.HashCores.Generator.Counter
                      , Clash.HashCores.TH
   default-extensions: DataKinds
                       FlexibleContexts
@@ -36,12 +35,11 @@ library
                       TypeApplications
                       TypeFamilies
                       TypeOperators
-
   build-depends:       base >= 4.7 && < 5
                      , ghc-typelits-extra
                      , ghc-typelits-natnormalise
                      , ghc-typelits-knownnat
-                     , clash-prelude
+                     , clash-prelude >=1 && <1.1
                      , lens
                      , deepseq
                      , bytestring
@@ -57,7 +55,8 @@ library
                              -- ^ GADTs confuse incomplete-patterns
                              -Wno-missing-home-modules
                              -- ^ GHCi & loading scripts
-
+  build-tool-depends:
+    clash-ghc:clash-ghc
 executable hash-cores-test
   hs-source-dirs:      test
   main-is:             Spec.hs
@@ -79,7 +78,7 @@ executable hash-cores-test
                      , ghc-typelits-natnormalise
                      , ghc-typelits-knownnat
                      , hash-cores
-                     , clash-prelude
+                     , clash-prelude >=1 && <1.1
                      , hspec
                      , QuickCheck
                      , smallcheck
@@ -98,3 +97,5 @@ executable hash-cores-test
   other-modules:       Test.HashCores.SHA256
                      , Test.HashCores.PipelinedSHA256
                      , Test.HashCores.InPlaceSHA256
+  build-tool-depends:
+     clash-ghc:clash-ghc

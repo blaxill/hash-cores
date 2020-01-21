@@ -7,6 +7,8 @@ import qualified Test.HashCores.SHA256          as SHA256
 import System.Environment (setEnv)
 import Control.Concurrent (rtsSupportsBoundThreads)
 
+import Prelude
+
 main = do
   setEnv "TASTY_QUICKCHECK_TESTS" "4"
   setEnv "TASTY_SMALLCHECK_DEPTH" "3"

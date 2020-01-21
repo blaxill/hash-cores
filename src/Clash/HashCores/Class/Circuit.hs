@@ -18,7 +18,7 @@ class Circuit x inputSemantics i o delay
   , x -> i
   , x -> o
   , x -> delay where
-  mkCircuit :: ( HiddenClockReset domain gated synchronous, KnownNat reference)
+  mkCircuit :: ( HiddenClockResetEnable domain, KnownNat reference)
     => x
     -> DSignal domain reference             (i, Incoming inputSemantics)
     -> ( DSignal domain (reference + delay)  o
@@ -27,7 +27,7 @@ class Circuit x inputSemantics i o delay
 -- Convenience when we don't care about data valid/ready signals, this could be
 -- that input is ''Always' valid.
 mkCircuitDataOnly ::
-  ( HiddenClockReset domain gated synchronous, KnownNat reference
+  ( HiddenClockResetEnable domain, KnownNat reference
   , Circuit x 'Always i o delay)
   => x
   -> DSignal domain reference           i
